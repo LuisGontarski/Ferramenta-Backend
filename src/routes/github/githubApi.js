@@ -1,7 +1,7 @@
 const express = require('express'); 
 const router = express.Router();
-const githubApiController = require('../../controllers/github/githubApiController');
+const commitCountController = require('../../controllers/github/commitCountController');
 
-router.post('/github', githubApiController.getGithubData);
+router.get('/commit/count', commitCountController.getCommitCount);
 module.exports = router;
 

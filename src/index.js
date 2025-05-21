@@ -12,7 +12,7 @@ const authRoutes = require('./routes/login/auth');
 app.use('/api/auth', authRoutes);
 
 const githubApiRoutes = require('./routes/github/githubApi');
-app.use('/api', githubApiRoutes);
+app.use('/api/github', githubApiRoutes);
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
