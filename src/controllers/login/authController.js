@@ -4,13 +4,13 @@ const bcrypt = require('bcryptjs');
 const fakeUser = {
   id: 1,
   email: 'usuario@teste.com',
-  passwordHash: bcrypt.hashSync('senha123', 10) // senha "senha123"
+  senha: bcrypt.hashSync('senha123', 10) // senha "senha123"
 };
 
 exports.login = (req, res) => {
   const { email, senha } = req.body;
 
-  if (email !== fakeUser.email || !bcrypt.compareSync(senha, fakeUser.passwordHash)) {
+  if (email !== fakeUser.email || !bcrypt.compareSync(senha, fakeUser.senha)) {
     return res.status(401).json({ message: 'Credenciais inválidas' });
   }
 
