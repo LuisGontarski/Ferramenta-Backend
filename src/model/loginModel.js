@@ -1,6 +1,5 @@
 const pool = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
-const { get } = require("../routes/login/auth");
 
 async function getUserByEmail(email) {
   const query = `SELECT * FROM usuario WHERE email = $1`;
