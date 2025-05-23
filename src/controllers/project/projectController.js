@@ -21,6 +21,18 @@ exports.postCreateProject = async (req, res) => {
     return res.status(400).json({ message: "Nome e descrição são obrigatórios." });
   }
 
+  if (typeof nome !== 'string' || nome.trim() === '') {
+    return res.status(400).json({ message: "Nome inválido." });
+  }
+
+  if (typeof email !== 'string' || !email.includes('@') || !email.includes('.com')) {
+  return res.status(400).json({ message: "Email inválido." });
+  }
+
+  if (typeof senha !== 'string' || senha.length < 6) {
+    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+  }
+
   try {
     const novoProjeto = await createProject({ nome, descricao });
     res.status(201).json({ message: "Projeto criado com sucesso!", id: novoProjeto.id });

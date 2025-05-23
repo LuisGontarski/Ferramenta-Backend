@@ -1,7 +1,10 @@
 const jwt = require("jsonwebtoken");
+const UserDTO = require("../../dtos/userDTO");
 const bcrypt = require("bcryptjs");
 const { createUser } = require("../../model/loginModel");
 const { getUserByEmail } = require("../../model/loginModel");
+const { updateUser } = require("../../model/loginModel");
+const { deleteUser } = require("../../model/loginModel");
 
 exports.postAuthLogin = async (req, res) => {
   const { email, senha } = req.body;
@@ -46,42 +49,103 @@ exports.getUserById = (req, res) => {
   res.json({ id: fakeUser.id, email: fakeUser.email });
 };
 
-exports.postCreateUser = async (req, res) => {
-  const { nome, email, senha } = req.body;
 
-  if (!nome || !email || !senha) {
-    return res
-      .status(400)
-      .json({ message: "Nome, email e senha são obrigatórios." });
+exports.postCreateUser = async (req, res) => {
+  const userDTO = new UserDTO(req.body);
+
+  if (!userDTO.isValid()) {
+    return res.status(400).json({ message: "Dados inválidos." });
+  }
+
+  if (!userDTO.email.includes('@') || !userDTO.email.includes('.com')) {
+    return res.status(400).json({ message: "Email inválido." });
+  }
+
+  if (userDTO.senha.length < 6) {
+    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
   }
 
   try {
-    const novoUsuario = await createUser({ nome, email, senha });
-    res
-      .status(201)
-      .json({ message: "Usuário registrado com sucesso!", id: novoUsuario.usuario_id });
+    const newUser = await createUser({
+      nome: userDTO.nome_usuario,
+      email: userDTO.email,
+      senha: userDTO.senha
+    });
+
+    res.status(201).json({
+      message: "Usuário registrado com sucesso!",
+      id: newUser.usuario_id
+    });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);
     res.status(500).json({ message: "Erro ao registrar usuário." });
   }
 };
 
-exports.putUpdateUser = (req, res) => {
-  const { email, senha } = req.body;
-
-  if (!email || !senha) {
-    return res.status(400).json({ message: "Email e senha são obrigatórios" });
-  }
-
-  res.status(200).json({ message: "Usuário atualizado com sucesso!" });
-};
-
-exports.deleteUser = (req, res) => {
+exports.putUpdateUser = async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    return res.status(400).json({ message: "ID do usuário é obrigatório" });
+    return res.status(400).json({ message: "ID é obrigatório." });
   }
 
-  res.status(200).json({ message: "Usuário deletado com sucesso!" });
+  const userDTO = new UserDTO({usuario_id: id, ...req.body});
+
+  if (!userDTO.isValid()) {
+    return res.status(400).json({ message: "Dados inválidos." });
+  }
+
+  if (!userDTO.email.includes('@') || !userDTO.email.includes('.com')) {
+    return res.status(400).json({ message: "Email inválido." });
+  }
+
+  if (userDTO.senha.length < 6) {
+    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+  }
+
+  if (userDTO.nome_usuario.trim() === '') {
+    return res.status(400).json({ message: "Nome inválido." });
+  }
+
+  try {
+    const userUpdated = await updateUser({
+      id,
+      nome: userDTO.nome_usuario,
+      email: userDTO.email,
+      senha: userDTO.senha,
+      cargo: userDTO.cargo,
+      github: userDTO.github,
+      foto_perfil: userDTO.foto_perfil,
+    });
+
+    if (!userUpdated) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    res.status(200).json({ message: "Usuário atualizado com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao atualizar usuário:", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "ID do usuário é obrigatório." });
+  }
+
+  try {
+    const userDeleted = await deleteUser(id);
+
+    if (!userDeleted) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    res.status(200).json({ message: "Usuário deletado com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao deletar usuário:", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
 };
