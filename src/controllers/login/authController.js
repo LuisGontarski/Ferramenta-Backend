@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
 const UserDTO = require("../../dtos/userDTO");
 const bcrypt = require("bcryptjs");
-const { createUser } = require("../../model/loginModel");
 const { getUserByEmail } = require("../../model/loginModel");
+const {getUserById} = require("../../model/loginModel");
+const { createUser, emailExists } = require("../../model/loginModel");
 const { updateUser } = require("../../model/loginModel");
 const { deleteUser } = require("../../model/loginModel");
 
@@ -39,14 +40,28 @@ exports.postAuthLogin = async (req, res) => {
   }
 };
 
-exports.getUserById = (req, res) => {
+exports.getUserById =  async (req, res) => {
   const { id } = req.params;
 
-  if (id != fakeUser.id) {
-    return res.status(404).json({ message: "Usuário não encontrado" });
+  if (!id) {
+    return res.status(400).json({ message: "ID do usuário é obrigatório." });
   }
 
-  res.json({ id: fakeUser.id, email: fakeUser.email });
+  try {
+    const user = await getUserById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    const userDTO = new UserDTO(user);
+    const { senha, ...userSemSenha } = userDTO;
+
+    res.status(200).json(userSemSenha);
+  } catch (error) {
+    console.error("Erro ao buscar usuário por ID:", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
 };
 
 
@@ -66,6 +81,12 @@ exports.postCreateUser = async (req, res) => {
   }
 
   try {
+
+    const existe = await emailExists(userDTO.email);
+    if (existe) {
+      return res.status(409).json({ message: "Email já cadastrado." });
+    }
+
     const newUser = await createUser({
       nome: userDTO.nome_usuario,
       email: userDTO.email,

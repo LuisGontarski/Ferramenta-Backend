@@ -1,5 +1,6 @@
 const pool = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
+const { get } = require("../routes/login/auth");
 
 async function getUserByEmail(email) {
   const query = `SELECT * FROM usuario WHERE email = $1`;
@@ -7,6 +8,21 @@ async function getUserByEmail(email) {
   const result = await pool.query(query, values);
   return result.rows[0];
 }
+
+
+async function getUserById(id) {
+  const query = `SELECT * FROM usuario WHERE usuario_id = $1`;
+  const values = [id];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+}
+
+async function emailExists(email) {
+  const result = await pool.query('SELECT 1 FROM usuario WHERE email = $1', [email]);
+  return result.rowCount > 0;
+}
+
+
 
 async function createUser({ nome, email, senha }) {
   const id = uuidv4();
@@ -45,8 +61,10 @@ async function deleteUser(id) {
 }
 
 module.exports = {
-  createUser,
   getUserByEmail,
+  getUserById,
+  emailExists,
+  createUser,
   updateUser,
   deleteUser,
 };
