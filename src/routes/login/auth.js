@@ -3,10 +3,11 @@ const router = express.Router();
 const authController = require('../../controllers/login/authController');
 const authenticate = ('../middleware/authenticate');
 
-router.post('/login', authController.login);
-router.get('/user', authController.getUserById)
-router.post('/create', authController.create);
-router.put('/update', authController.update);
-router.delete('/delete', authController.delete);
+// Recurso: "users"
+router.post('/auth/login', authController.postAuthLogin);       
+router.post('/user', authController.postCreateUser);               
+router.get('/user/:id', authController.getUserById);           
+router.put('/user', authController.putUpdateUser);                
+router.delete('/user/:id', authController.deleteUser);             
 
 module.exports = router;

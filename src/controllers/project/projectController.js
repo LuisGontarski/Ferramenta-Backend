@@ -1,5 +1,3 @@
-// const { getAllProjects, createProject, updateProjectById, deleteProjectById } = require('../../model/projectModel');
-
 const fakeProject = {
   id: "1",
   nome: "Projeto Exemplo",
@@ -16,7 +14,7 @@ exports.getProjectsById = (req, res) => {
 }
 
 // POST /projects
-exports.createProject = async (req, res) => {
+exports.postCreateProject = async (req, res) => {
   const { nome, descricao } = req.body;
 
   if (!nome || !descricao) {
@@ -33,7 +31,7 @@ exports.createProject = async (req, res) => {
 };
 
 // PUT /projects
-exports.updateProject = (req, res) => {
+exports.putUpdateProject = (req, res) => {
   const { nome, descricao } = req.body;
 
   if (!nome || !descricao) {

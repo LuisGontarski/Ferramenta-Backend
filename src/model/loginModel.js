@@ -11,9 +11,9 @@ async function getUserByEmail(email) {
 async function createUser({ nome, email, senha }) {
   const id = uuidv4();
   const query = `
-    INSERT INTO usuario (id, nome_usuario, email, senha)
+    INSERT INTO usuario (usuario_id, nome_usuario, email, senha)
     VALUES ($1, $2, $3, $4)
-    RETURNING id;
+    RETURNING usuario_id;
   `;
   const values = [id, nome, email, senha];
   const result = await pool.query(query, values);

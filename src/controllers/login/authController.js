@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const { createUser } = require("../../model/loginModel");
 const { getUserByEmail } = require("../../model/loginModel");
 
-exports.login = async (req, res) => {
+exports.postAuthLogin = async (req, res) => {
   const { email, senha } = req.body;
 
   try {
@@ -46,7 +46,7 @@ exports.getUserById = (req, res) => {
   res.json({ id: fakeUser.id, email: fakeUser.email });
 };
 
-exports.create = async (req, res) => {
+exports.postCreateUser = async (req, res) => {
   const { nome, email, senha } = req.body;
 
   if (!nome || !email || !senha) {
@@ -59,14 +59,14 @@ exports.create = async (req, res) => {
     const novoUsuario = await createUser({ nome, email, senha });
     res
       .status(201)
-      .json({ message: "Usuário registrado com sucesso!", id: novoUsuario.id });
+      .json({ message: "Usuário registrado com sucesso!", id: novoUsuario.usuario_id });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);
     res.status(500).json({ message: "Erro ao registrar usuário." });
   }
 };
 
-exports.update = (req, res) => {
+exports.putUpdateUser = (req, res) => {
   const { email, senha } = req.body;
 
   if (!email || !senha) {
@@ -76,7 +76,7 @@ exports.update = (req, res) => {
   res.status(200).json({ message: "Usuário atualizado com sucesso!" });
 };
 
-exports.delete = (req, res) => {
+exports.deleteUser = (req, res) => {
   const { id } = req.params;
 
   if (!id) {
