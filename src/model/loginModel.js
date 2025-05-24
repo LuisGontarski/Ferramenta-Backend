@@ -30,36 +30,12 @@ async function emailExists(email) {
   return result.rowCount > 0;
 }
 
-<<<<<<< HEAD
-async function createUser({ nome, email, senha }) {
-=======
-
 
 async function createUser({ nome, email, senha, cargo, github, foto_perfil }) {
->>>>>>> 411a2f0bdd3354f02457cf60eb392050888c6d87
   const id = uuidv4();
   const criadoEm = new Date();
 
   const query = `
-<<<<<<< HEAD
-    INSERT INTO usuario (usuario_id, nome_usuario, email, senha, criado_em)
-    VALUES ($1, $2, $3, $4, $5)
-    RETURNING usuario_id, criado_em;
-  `;
-  const values = [id, nome, email, senha, criadoEm];
-  const result = await pool.query(query, values);
-
-  const usuario = result.rows[0];
-
-  return {
-    usuario_id: usuario.usuario_id,
-    criado_em: formatDateToDDMMYYYY(new Date(usuario.criado_em))
-  };
-}
-
-
-async function updateUser({ id, nome, email, senha }) {
-=======
     INSERT INTO usuario (
       usuario_id, nome_usuario, email, senha, cargo, github, foto_perfil
     )
@@ -77,7 +53,6 @@ async function updateUser({ id, nome, email, senha }) {
 }
 
 async function updateUser({ id, nome, email, senha, cargo, github, foto_perfil }) {
->>>>>>> 411a2f0bdd3354f02457cf60eb392050888c6d87
   const query = `
     UPDATE usuario
     SET

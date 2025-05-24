@@ -114,14 +114,10 @@ exports.postCreateUser = async (req, res) => {
       nome: userDTO.nome_usuario,
       email: userDTO.email,
       senha: userDTO.senha,
-<<<<<<< HEAD
-    });
-=======
       cargo: userDTO.cargo,
       github: userDTO.github,
       foto_perfil: userDTO.foto_perfil
-    })
->>>>>>> 411a2f0bdd3354f02457cf60eb392050888c6d87
+    });
 
     res.status(201).json({
       message: "Usuário registrado com sucesso!",
