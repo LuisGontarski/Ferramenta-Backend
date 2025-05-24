@@ -2,10 +2,32 @@ const jwt = require("jsonwebtoken");
 const UserDTO = require("../../dtos/userDTO");
 const bcrypt = require("bcryptjs");
 const { getUserByEmail } = require("../../model/loginModel");
-const {getUserById} = require("../../model/loginModel");
+const { getUserById } = require("../../model/loginModel");
 const { createUser, emailExists } = require("../../model/loginModel");
 const { updateUser } = require("../../model/loginModel");
 const { deleteUser } = require("../../model/loginModel");
+const { getAllUsers } = require("../../model/loginModel");
+const formatDateToDDMMYYYY = require("../../utils/ft_dateUtils");
+
+exports.getAllUsers = async (_req, res) => {
+  try {
+    const users = await getAllUsers();
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ message: "Nenhum usuário encontrado." });
+    }
+
+    const usersDTO = users.map((user) => new UserDTO(user));
+    const usersSemSenha = usersDTO.map(
+      ({ senha, ...userSemSenha }) => userSemSenha
+    );
+
+    res.status(200).json(usersSemSenha);
+  } catch (error) {
+    console.error("Erro ao buscar usuários:", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+};
 
 exports.postAuthLogin = async (req, res) => {
   const { email, senha } = req.body;
@@ -31,7 +53,7 @@ exports.postAuthLogin = async (req, res) => {
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
-    );  
+    );
 
     res.json({ token });
   } catch (error) {
@@ -40,7 +62,7 @@ exports.postAuthLogin = async (req, res) => {
   }
 };
 
-exports.getUserById =  async (req, res) => {
+exports.getUserById = async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
@@ -55,6 +77,7 @@ exports.getUserById =  async (req, res) => {
     }
 
     const userDTO = new UserDTO(user);
+    userDTO.criado_em = formatDateToDDMMYYYY(userDTO.criado_em);
     const { senha, ...userSemSenha } = userDTO;
 
     res.status(200).json(userSemSenha);
@@ -64,7 +87,6 @@ exports.getUserById =  async (req, res) => {
   }
 };
 
-
 exports.postCreateUser = async (req, res) => {
   const userDTO = new UserDTO(req.body);
 
@@ -72,16 +94,17 @@ exports.postCreateUser = async (req, res) => {
     return res.status(400).json({ message: "Dados inválidos." });
   }
 
-  if (!userDTO.email.includes('@') || !userDTO.email.includes('.com')) {
+  if (!userDTO.email.includes("@") || !userDTO.email.includes(".com")) {
     return res.status(400).json({ message: "Email inválido." });
   }
 
   if (userDTO.senha.length < 6) {
-    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+    return res
+      .status(400)
+      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
   }
 
   try {
-
     const existe = await emailExists(userDTO.email);
     if (existe) {
       return res.status(409).json({ message: "Email já cadastrado." });
@@ -90,12 +113,12 @@ exports.postCreateUser = async (req, res) => {
     const newUser = await createUser({
       nome: userDTO.nome_usuario,
       email: userDTO.email,
-      senha: userDTO.senha
+      senha: userDTO.senha,
     });
 
     res.status(201).json({
       message: "Usuário registrado com sucesso!",
-      id: newUser.usuario_id
+      id: newUser.usuario_id,
     });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);
@@ -110,21 +133,23 @@ exports.putUpdateUser = async (req, res) => {
     return res.status(400).json({ message: "ID é obrigatório." });
   }
 
-  const userDTO = new UserDTO({usuario_id: id, ...req.body});
+  const userDTO = new UserDTO({ usuario_id: id, ...req.body });
 
   if (!userDTO.isValid()) {
     return res.status(400).json({ message: "Dados inválidos." });
   }
 
-  if (!userDTO.email.includes('@') || !userDTO.email.includes('.com')) {
+  if (!userDTO.email.includes("@") || !userDTO.email.includes(".com")) {
     return res.status(400).json({ message: "Email inválido." });
   }
 
   if (userDTO.senha.length < 6) {
-    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+    return res
+      .status(400)
+      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
   }
 
-  if (userDTO.nome_usuario.trim() === '') {
+  if (userDTO.nome_usuario.trim() === "") {
     return res.status(400).json({ message: "Nome inválido." });
   }
 

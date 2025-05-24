@@ -7,6 +7,7 @@ class UserDTO {
     cargo,
     github,
     foto_perfil,
+    criado_em,
   }) {
     this.usuario_id = usuario_id;
     this.nome_usuario = nome_usuario;
@@ -15,6 +16,7 @@ class UserDTO {
     this.cargo = cargo;
     this.github = github;
     this.foto_perfil = foto_perfil;
+    this.criado_em = criado_em;
   }
 
   isValid() {
@@ -25,7 +27,8 @@ class UserDTO {
       typeof this.senha === "string" &&
       typeof this.cargo === "string" &&
       typeof this.github === "string" &&
-      typeof this.foto_perfil === "string"
+      typeof this.foto_perfil === "string" &&
+      typeof this.criado_em === "string"   
     );
   }
 }

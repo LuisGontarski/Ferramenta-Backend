@@ -1,5 +1,13 @@
 const pool = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
+const formatDateToDDMMYYYY = require("../utils/ft_dateUtils");
+const { get } = require("../routes/login/auth");
+
+async function getAllUsers() {
+  const query = `SELECT * FROM usuario`;
+  const result = await pool.query(query);
+  return result.rows;
+}
 
 async function getUserByEmail(email) {
   const query = `SELECT * FROM usuario WHERE email = $1`;
@@ -7,7 +15,6 @@ async function getUserByEmail(email) {
   const result = await pool.query(query, values);
   return result.rows[0];
 }
-
 
 async function getUserById(id) {
   const query = `SELECT * FROM usuario WHERE usuario_id = $1`;
@@ -17,23 +24,32 @@ async function getUserById(id) {
 }
 
 async function emailExists(email) {
-  const result = await pool.query('SELECT 1 FROM usuario WHERE email = $1', [email]);
+  const result = await pool.query("SELECT 1 FROM usuario WHERE email = $1", [
+    email,
+  ]);
   return result.rowCount > 0;
 }
 
-
-
 async function createUser({ nome, email, senha }) {
   const id = uuidv4();
+  const criadoEm = new Date();
+
   const query = `
-    INSERT INTO usuario (usuario_id, nome_usuario, email, senha)
-    VALUES ($1, $2, $3, $4)
-    RETURNING usuario_id;
+    INSERT INTO usuario (usuario_id, nome_usuario, email, senha, criado_em)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING usuario_id, criado_em;
   `;
-  const values = [id, nome, email, senha];
+  const values = [id, nome, email, senha, criadoEm];
   const result = await pool.query(query, values);
-  return result.rows[0];
+
+  const usuario = result.rows[0];
+
+  return {
+    usuario_id: usuario.usuario_id,
+    criado_em: formatDateToDDMMYYYY(new Date(usuario.criado_em))
+  };
 }
+
 
 async function updateUser({ id, nome, email, senha }) {
   const query = `
@@ -66,4 +82,5 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
+  getAllUsers,
 };

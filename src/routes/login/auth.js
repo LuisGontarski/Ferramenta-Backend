@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require('../../controllers/login/authController');
 const authenticate = ('../middleware/authenticate');
 
-// Recurso: "users"
+router.get('/user', authController.getAllUsers);
 router.post('/auth/login', authController.postAuthLogin);       
 router.post('/user', authController.postCreateUser);               
 router.get('/user/:id', authController.getUserById);           
