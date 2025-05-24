@@ -1,7 +1,5 @@
 const pool = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
-const formatDateToDDMMYYYY = require("../utils/ft_dateUtils");
-const { get } = require("../routes/login/auth");
 
 async function getAllUsers() {
   const query = `SELECT * FROM usuario`;
