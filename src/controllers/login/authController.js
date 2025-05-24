@@ -90,8 +90,11 @@ exports.postCreateUser = async (req, res) => {
     const newUser = await createUser({
       nome: userDTO.nome_usuario,
       email: userDTO.email,
-      senha: userDTO.senha
-    });
+      senha: userDTO.senha,
+      cargo: userDTO.cargo,
+      github: userDTO.github,
+      foto_perfil: userDTO.foto_perfil
+    })
 
     res.status(201).json({
       message: "Usuário registrado com sucesso!",
@@ -130,7 +133,7 @@ exports.putUpdateUser = async (req, res) => {
 
   try {
     const userUpdated = await updateUser({
-      id,
+      id: userDTO.usuario_id,
       nome: userDTO.nome_usuario,
       email: userDTO.email,
       senha: userDTO.senha,
