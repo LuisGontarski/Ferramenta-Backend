@@ -8,6 +8,7 @@ const { updateUser } = require("../../model/loginModel");
 const { deleteUser } = require("../../model/loginModel");
 const { getAllUsers } = require("../../model/loginModel");
 const formatDateToDDMMYYYY = require("../../utils/ft_dateUtils");
+const ft_validator = require("../../utils/validatorUtils");
 
 exports.getAllUsers = async (_req, res) => {
   try {
@@ -89,23 +90,35 @@ exports.getUserById = async (req, res) => {
 
 exports.postCreateUser = async (req, res) => {
   const userDTO = new UserDTO(req.body);
+  const errors = {};
 
-  if (!userDTO.isValid()) {
-    return res.status(400).json({ message: "Dados inválidos." });
+  const nomeError = ft_validator.validateRequired(userDTO.nome_usuario, 'Nome de usuário');
+  if (nomeError) {
+    errors.nome_usuario = nomeError;
   }
 
-  if (!userDTO.email.includes("@") || !userDTO.email.includes(".com")) {
-    return res.status(400).json({ message: "Email inválido." });
+  let emailValidationError = ft_validator.validateRequired(userDTO.email, 'E-mail');
+  if (!emailValidationError) {
+    emailValidationError = ft_validator.validateEmailFormatBasic(userDTO.email);
+  }
+  if (emailValidationError) {
+    errors.email = emailValidationError;
   }
 
-  if (userDTO.senha.length < 6) {
-    return res
-      .status(400)
-      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
+  let senhaValidationError = ft_validator.validateRequired(userDTO.senha, 'Senha');
+  if (!senhaValidationError) {
+    senhaValidationError = ft_validator.validatePasswordLength(userDTO.senha, 6);
+  }
+  if (senhaValidationError) {
+    errors.senha = senhaValidationError;
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return res.status(400).json({ message: "Dados inválidos.", errors });
   }
 
   try {
-    const existe = await emailExists(userDTO.email);
+    const existe = await ft_validator.emailExists(userDTO.email);
     if (existe) {
       return res.status(409).json({ message: "Email já cadastrado." });
     }
@@ -121,11 +134,11 @@ exports.postCreateUser = async (req, res) => {
 
     res.status(201).json({
       message: "Usuário registrado com sucesso!",
-      id: newUser.usuario_id,
+      usuario_id: newUser.usuario_id,
     });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);
-    res.status(500).json({ message: "Erro ao registrar usuário." });
+    res.status(500).json({ message: "Erro interno ao registrar usuário." });
   }
 };
 

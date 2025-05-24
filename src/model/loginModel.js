@@ -21,17 +21,8 @@ async function getUserById(id) {
   return result.rows[0];
 }
 
-async function emailExists(email) {
-  const result = await pool.query("SELECT 1 FROM usuario WHERE email = $1", [
-    email,
-  ]);
-  return result.rowCount > 0;
-}
-
-
 async function createUser({ nome, email, senha, cargo, github, foto_perfil }) {
   const id = uuidv4();
-  const criadoEm = new Date();
 
   const query = `
     INSERT INTO usuario (
@@ -46,7 +37,7 @@ async function createUser({ nome, email, senha, cargo, github, foto_perfil }) {
     return result.rows[0];
   } catch (error) {
     console.error("Erro ao criar usuário no modelo:", error);
-    throw error; // Re-throw para ser tratado pelo controller
+    throw error;
   }
 }
 
@@ -91,7 +82,6 @@ async function deleteUser(id) {
 module.exports = {
   getUserByEmail,
   getUserById,
-  emailExists,
   createUser,
   updateUser,
   deleteUser,
