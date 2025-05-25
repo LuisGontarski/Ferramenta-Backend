@@ -14,9 +14,9 @@ async function getUserByEmail(email) {
   return result.rows[0];
 }
 
-async function getUserById(id) {
+async function getUserById(usuario_id) {
   const query = `SELECT * FROM usuario WHERE usuario_id = $1`;
-  const values = [id];
+  const values = [usuario_id];
   const result = await pool.query(query, values);
   return result.rows[0];
 }

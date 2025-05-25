@@ -8,6 +8,7 @@ class UserDTO {
     cargo,
     github,
     foto_perfil,
+    criado_em,
   }) {
     // Agora as variáveis da direita existem. Se não vierem no req.body,
     // elas serão 'undefined', o que é esperado para campos opcionais ou
@@ -19,6 +20,7 @@ class UserDTO {
     this.cargo = cargo;
     this.github = github;
     this.foto_perfil = foto_perfil;
+    this.criado_em = criado_em;
   }
 
   isValid() {
@@ -51,6 +53,11 @@ class UserDTO {
     }
     if (this.foto_perfil !== undefined && typeof this.foto_perfil !== "string") {
         console.error("DTO Validation Error: foto_perfil must be a string if provided", this.foto_perfil);
+        return false;
+    }
+
+    if (this.criado_em !== undefined && typeof this.criado_em !== "string") {
+        console.error("DTO Validation Error: criado_em must be a string if provided", this.criado_em);
         return false;
     }
 

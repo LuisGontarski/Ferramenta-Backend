@@ -51,12 +51,17 @@ exports.postAuthLogin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.usuario_id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    res.json({ token });
+    res.json({
+      token: token,
+      usuario_id: user.usuario_id,
+    });
+
+    console.log("Usuário logado com sucesso:", user.id);
   } catch (error) {
     console.error("Erro no login:", error);
     res.status(500).json({ message: "Erro interno do servidor" });
@@ -64,21 +69,21 @@ exports.postAuthLogin = async (req, res) => {
 };
 
 exports.getUserById = async (req, res) => {
-  const { id } = req.params;
+  const { usuario_id } = req.params;
 
-  if (!id) {
+  if (!usuario_id) {
     return res.status(400).json({ message: "ID do usuário é obrigatório." });
   }
 
   try {
-    const user = await getUserById(id);
+    console.log("ID do usuário:", usuario_id);
+    const user = await getUserById(usuario_id);
 
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
 
     const userDTO = new UserDTO(user);
-    userDTO.criado_em = formatDateToDDMMYYYY(userDTO.criado_em);
     const { senha, ...userSemSenha } = userDTO;
 
     res.status(200).json(userSemSenha);
@@ -92,12 +97,18 @@ exports.postCreateUser = async (req, res) => {
   const userDTO = new UserDTO(req.body);
   const errors = {};
 
-  const nomeError = ft_validator.validateRequired(userDTO.nome_usuario, 'Nome de usuário');
+  const nomeError = ft_validator.validateRequired(
+    userDTO.nome_usuario,
+    "Nome de usuário"
+  );
   if (nomeError) {
     errors.nome_usuario = nomeError;
   }
 
-  let emailValidationError = ft_validator.validateRequired(userDTO.email, 'E-mail');
+  let emailValidationError = ft_validator.validateRequired(
+    userDTO.email,
+    "E-mail"
+  );
   if (!emailValidationError) {
     emailValidationError = ft_validator.validateEmailFormatBasic(userDTO.email);
   }
@@ -105,9 +116,15 @@ exports.postCreateUser = async (req, res) => {
     errors.email = emailValidationError;
   }
 
-  let senhaValidationError = ft_validator.validateRequired(userDTO.senha, 'Senha');
+  let senhaValidationError = ft_validator.validateRequired(
+    userDTO.senha,
+    "Senha"
+  );
   if (!senhaValidationError) {
-    senhaValidationError = ft_validator.validatePasswordLength(userDTO.senha, 6);
+    senhaValidationError = ft_validator.validatePasswordLength(
+      userDTO.senha,
+      6
+    );
   }
   if (senhaValidationError) {
     errors.senha = senhaValidationError;
@@ -129,7 +146,7 @@ exports.postCreateUser = async (req, res) => {
       senha: userDTO.senha,
       cargo: userDTO.cargo,
       github: userDTO.github,
-      foto_perfil: userDTO.foto_perfil
+      foto_perfil: userDTO.foto_perfil,
     });
 
     res.status(201).json({
