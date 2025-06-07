@@ -10,9 +10,6 @@ class UserDTO {
     foto_perfil,
     criado_em,
   }) {
-    // Agora as variáveis da direita existem. Se não vierem no req.body,
-    // elas serão 'undefined', o que é esperado para campos opcionais ou
-    // campos como 'usuario_id' na criação.
     this.usuario_id = usuario_id;
     this.nome_usuario = nome_usuario;
     this.email = email;
