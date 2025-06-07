@@ -1,4 +1,4 @@
-const { createProject } = require("../../services/projectService");
+const { createProject } = require("../../model/projectModel");
 const { getProjectsById } = require("../../model/projectModel");
 const { putUpdateProject } = require("../../model/projectModel");
 const { deleteProject } = require("../../model/projectModel");

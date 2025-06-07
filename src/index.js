@@ -12,7 +12,7 @@ const authRoutes = require('./routes/login/auth');
 app.use('/api', authRoutes);
 
 const githubApiRoutes = require('./routes/github/githubApi');
-app.use('/api/github', githubApiRoutes);
+app.use('/api', githubApiRoutes);
 
 const projectRoutes = require('./routes/project/project');
 app.use('/api', projectRoutes);
