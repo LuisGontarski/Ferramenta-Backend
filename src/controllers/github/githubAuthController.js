@@ -25,7 +25,8 @@ exports.githubCallback = async (req, res) => {
       return res.status(400).send("Não foi possível obter o token de acesso");
     }
 
-    res.json({ access_token: accessToken });
+    // ✅ Redireciona para o frontend após login com sucesso
+    res.redirect("http://localhost:5173");
   } catch (error) {
     console.error("Erro ao trocar code por token:", error.message);
     res.status(500).send("Erro interno no servidor");
