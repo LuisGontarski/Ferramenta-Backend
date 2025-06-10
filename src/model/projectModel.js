@@ -1,30 +1,35 @@
 const pool = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
 
+async function getAllProjects() {
+  const query = `SELECT * FROM projeto`;
+  try {
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (error) {
+    console.error("Erro ao obter projetos no modelo:", error);
+    throw error;
+  }
+}
+
 async function getProjectsById(id) {
   const query = `SELECT * FROM projeto WHERE projeto_id = $1`;
   const values = [id];
   const result = await pool.query(query, values);
   if (result.rowCount === 0) {
-    return null; // Retorna null se o projeto não for encontrado
+    return null;
   }
   return result.rows[0];
 }
 
-async function createProject({
-  nome,
-  descricao,
-  data_inicio,
-  data_fim,
-  repositorio = null, // Repositório é opcional
-}) {
-  const id = uuidv4();
+async function createProject({ nome, descricao, data_inicio, data_fim }) {
+  const projeto_id = uuidv4();
   const query = `
-    INSERT INTO projeto (projeto_id, nome_projeto, descricao, data_inicio, data_fim_prevista, repositorio)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO projeto (projeto_id, nome, descricao, data_inicio, data_fim_prevista)
+    VALUES ($1, $2, $3, $4, $5)
     RETURNING projeto_id;
   `;
-  const values = [id, nome, descricao, data_inicio, data_fim, repositorio];
+  const values = [projeto_id, nome, descricao, data_inicio, data_fim];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -34,20 +39,28 @@ async function createProject({
   }
 }
 
-async function updateProject({ id, nome, descricao }) {
+async function updateProject({
+  projeto_id,
+  nome,
+  descricao,
+  data_inicio,
+  data_fim,
+}) {
   const query = `
     UPDATE projeto
     SET
-      nome_projeto = COALESCE($1, nome_projeto),
-      descricao = COALESCE($2, descricao)
-    WHERE projeto_id = $3
+      nome = COALESCE($1, nome),
+      descricao = COALESCE($2, descricao),
+      data_inicio = COALESCE($3, data_inicio),
+      data_fim_prevista = COALESCE($4, data_fim_prevista)
+    WHERE projeto_id = $5
     RETURNING projeto_id;
   `;
-  const values = [nome, descricao, id];
+  const values = [nome, descricao, data_inicio, data_fim, projeto_id];
   try {
     const result = await pool.query(query, values);
     if (result.rowCount === 0) {
-      return null; // Projeto não encontrado para atualizar
+      return null;
     }
     return result.rows[0];
   } catch (error) {
@@ -72,6 +85,7 @@ async function deleteProject(id) {
 }
 
 module.exports = {
+  getAllProjects,
   getProjectsById,
   createProject,
   updateProject,
