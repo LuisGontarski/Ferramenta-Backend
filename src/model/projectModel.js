@@ -14,8 +14,8 @@ async function getProjectsById(id) {
 async function createProject({
   nome,
   descricao,
-  dataInicio,
-  dataFim,
+  data_inicio,
+  data_fim,
   repositorio = null, // Repositório é opcional
 }) {
   const id = uuidv4();
@@ -24,7 +24,7 @@ async function createProject({
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING projeto_id;
   `;
-  const values = [id, nome, descricao, dataInicio, dataFim, repositorio];
+  const values = [id, nome, descricao, data_inicio, data_fim, repositorio];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];

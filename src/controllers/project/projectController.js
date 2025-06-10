@@ -4,9 +4,9 @@ const { putUpdateProject } = require("../../model/projectModel");
 const { deleteProject } = require("../../model/projectModel");
 
 exports.postCreateProject = async (req, res) => {
-  const { nome, descricao, dataInicio, dataFim, repositorio } = req.body;
+  const { nome, descricao, data_inicio, data_fim, repositorio } = req.body;
 
-  if (!nome || !descricao || !dataInicio || !dataFim || !membros || !repositorio) {
+  if (!nome || !descricao || !data_inicio || !data_fim) {
     return res
       .status(400)
       .json({ message: "Todos os campos obrigatórios devem ser preenchidos." });
@@ -20,16 +20,16 @@ exports.postCreateProject = async (req, res) => {
     return res.status(400).json({ message: "Descrição inválida." });
   }
 
-  if (typeof dataInicio !== "string" || !Date.parse(dataInicio)) {
+  if (typeof data_inicio !== "string" || !Date.parse(data_inicio)) {
     return res.status(400).json({ message: "Data de início inválida." });
   }
 
-  if (typeof dataFim !== "string" || !Date.parse(dataFim)) {
+  if (typeof data_fim !== "string" || !Date.parse(data_fim)) {
     return res.status(400).json({ message: "Data de fim inválida." });
   }
 
   try {
-    const novoProjeto = await createProject({ nome, descricao, dataInicio, dataFim, repositorio });
+    const novoProjeto = await createProject({ nome, descricao, data_inicio, data_fim, repositorio });
     if (!novoProjeto) {
       return res.status(500).json({ message: "Erro ao criar projeto." });
     }
