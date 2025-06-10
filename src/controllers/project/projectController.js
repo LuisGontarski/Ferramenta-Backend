@@ -3,6 +3,45 @@ const { getProjectsById } = require("../../model/projectModel");
 const { putUpdateProject } = require("../../model/projectModel");
 const { deleteProject } = require("../../model/projectModel");
 
+exports.postCreateProject = async (req, res) => {
+  const { nome, descricao, dataInicio, dataFim, repositorio } = req.body;
+
+  if (!nome || !descricao || !dataInicio || !dataFim || !membros || !repositorio) {
+    return res
+      .status(400)
+      .json({ message: "Todos os campos obrigatórios devem ser preenchidos." });
+  }
+
+  if (typeof nome !== "string" || nome.trim() === "") {
+    return res.status(400).json({ message: "Nome inválido." });
+  }
+
+  if (typeof descricao !== "string" || descricao.trim() === "") {
+    return res.status(400).json({ message: "Descrição inválida." });
+  }
+
+  if (typeof dataInicio !== "string" || !Date.parse(dataInicio)) {
+    return res.status(400).json({ message: "Data de início inválida." });
+  }
+
+  if (typeof dataFim !== "string" || !Date.parse(dataFim)) {
+    return res.status(400).json({ message: "Data de fim inválida." });
+  }
+
+  try {
+    const novoProjeto = await createProject({ nome, descricao, dataInicio, dataFim, repositorio });
+    if (!novoProjeto) {
+      return res.status(500).json({ message: "Erro ao criar projeto." });
+    }
+    res
+      .status(201)
+      .json({ message: "Projeto criado com sucesso!", id: novoProjeto.id });
+  } catch (error) {
+    console.error("Erro ao criar projeto:", error);
+    res.status(500).json({ message: "Erro interno ao criar projeto." });
+  }
+};
+
 // GET /projects
 exports.getProjectsById = (req, res) => {
   const { id } = req.params;
@@ -14,45 +53,6 @@ exports.getProjectsById = (req, res) => {
     nome: fakeProject.nome,
     descricao: fakeProject.descricao,
   });
-};
-
-// POST /projects
-exports.postCreateProject = async (req, res) => {
-  const { nome, descricao } = req.body;
-
-  if (!nome || !descricao) {
-    return res
-      .status(400)
-      .json({ message: "Nome e descrição são obrigatórios." });
-  }
-
-  if (typeof nome !== "string" || nome.trim() === "") {
-    return res.status(400).json({ message: "Nome inválido." });
-  }
-
-  if (
-    typeof email !== "string" ||
-    !email.includes("@") ||
-    !email.includes(".com")
-  ) {
-    return res.status(400).json({ message: "Email inválido." });
-  }
-
-  if (typeof senha !== "string" || senha.length < 6) {
-    return res
-      .status(400)
-      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
-  }
-
-  try {
-    const novoProjeto = await createProject({ nome, descricao });
-    res
-      .status(201)
-      .json({ message: "Projeto criado com sucesso!", id: novoProjeto.id });
-  } catch (error) {
-    console.error("Erro ao criar projeto:", error);
-    res.status(500).json({ message: "Erro interno ao criar projeto." });
-  }
 };
 
 // PUT /projects

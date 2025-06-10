@@ -61,7 +61,7 @@ exports.postAuthLogin = async (req, res) => {
       usuario_id: user.usuario_id,
     });
 
-    console.log("Usuário logado com sucesso:", user.id);
+    // console.log("Usuário logado com sucesso:", user.id);
   } catch (error) {
     console.error("Erro no login:", error);
     res.status(500).json({ message: "Erro interno do servidor" });
@@ -76,7 +76,7 @@ exports.getUserById = async (req, res) => {
   }
 
   try {
-    console.log("ID do usuário:", usuario_id);
+    // console.log("ID do usuário:", usuario_id);-
     const user = await getUserById(usuario_id);
 
     if (!user) {

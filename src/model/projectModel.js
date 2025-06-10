@@ -11,14 +11,20 @@ async function getProjectsById(id) {
   return result.rows[0];
 }
 
-async function createProject({ nome, descricao }) {
+async function createProject({
+  nome,
+  descricao,
+  dataInicio,
+  dataFim,
+  repositorio = null, // Repositório é opcional
+}) {
   const id = uuidv4();
   const query = `
-    INSERT INTO projeto (projeto_id, nome_projeto, descricao)
-    VALUES ($1, $2, $3)
+    INSERT INTO projeto (projeto_id, nome_projeto, descricao, data_inicio, data_fim_prevista, repositorio)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING projeto_id;
   `;
-  const values = [id, nome, descricao];
+  const values = [id, nome, descricao, dataInicio, dataFim, repositorio];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -65,4 +71,9 @@ async function deleteProject(id) {
   }
 }
 
-module.exports = { getProjectsById, createProject, updateProject, deleteProject };
+module.exports = {
+  getProjectsById,
+  createProject,
+  updateProject,
+  deleteProject,
+};
