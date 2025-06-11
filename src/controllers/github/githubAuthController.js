@@ -8,7 +8,7 @@ exports.githubCallback = async (req, res) => {
   }
 
   try {
-    // Troca o code pelo access_token
+    // Troca o code por access_token
     const tokenResponse = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -26,12 +26,22 @@ exports.githubCallback = async (req, res) => {
       return res.status(400).send("Não foi possível obter o token de acesso");
     }
 
-    // Redireciona o usuário para o frontend, com o token na URL
-    res.redirect(`http://localhost:5173?access_token=${accessToken}`);
     console.log("Token de acesso obtido com sucesso:", accessToken);
+
+    // Detecta se a requisição foi feita pelo navegador ou API
+    const acceptHeader = req.headers.accept || "";
+    const isApiRequest = acceptHeader.includes("application/json");
+
+    if (isApiRequest) {
+      // Retorna como JSON (ideal para Postman ou fetch do frontend)
+      return res.json({ access_token: accessToken });
+    } else {
+      // Redireciona para o frontend com o token como parâmetro na URL
+      return res.redirect(`http://localhost:5173?access_token=${accessToken}`);
+    }
   } catch (error) {
     console.error("Erro ao trocar code por token:", error.message);
-    res.status(500).send("Erro interno no servidor");
+    return res.status(500).send("Erro interno no servidor");
   }
 };
 
