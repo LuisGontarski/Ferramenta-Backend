@@ -10,4 +10,6 @@ router.get("/auth/github/callback", githubAuthController.githubCallback);
 router.get("/auth/github/login", githubAuthController.githubLogin);
 router.get("/github/repos", githubAuthController.getUserRepositories);
 
+router.post("/github/commit", githubAuthController.postCommitFile);
+
 module.exports = router;

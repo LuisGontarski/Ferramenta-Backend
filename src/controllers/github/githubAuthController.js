@@ -83,3 +83,80 @@ exports.getUserRepositories = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar repositórios" });
   }
 };
+
+exports.postCommitFile = async (req, res) => {
+  const { access_token, owner, repo, filePath, content, commitMessage } = req.body;
+
+  const headers = {
+    Authorization: `Bearer ${access_token}`,
+    Accept: "application/vnd.github+json",
+  };
+
+  try {
+    const refRes = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/main`,
+      { headers }
+    );
+    const latestCommitSha = refRes.data.object.sha;
+
+    const commitRes = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/git/commits/${latestCommitSha}`,
+      { headers }
+    );
+    const baseTreeSha = commitRes.data.tree.sha;
+
+    const blobRes = await axios.post(
+      `https://api.github.com/repos/${owner}/${repo}/git/blobs`,
+      {
+        content: content,
+        encoding: "utf-8",
+      },
+      { headers }
+    );
+    const blobSha = blobRes.data.sha;
+
+    const treeRes = await axios.post(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees`,
+      {
+        base_tree: baseTreeSha,
+        tree: [
+          {
+            path: filePath,
+            mode: "100644",
+            type: "blob",
+            sha: blobSha,
+          },
+        ],
+      },
+      { headers }
+    );
+    const newTreeSha = treeRes.data.sha;
+
+    const newCommitRes = await axios.post(
+      `https://api.github.com/repos/${owner}/${repo}/git/commits`,
+      {
+        message: commitMessage,
+        tree: newTreeSha,
+        parents: [latestCommitSha],
+      },
+      { headers }
+    );
+    const newCommitSha = newCommitRes.data.sha;
+
+    await axios.patch(
+      `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/main`,
+      {
+        sha: newCommitSha,
+      },
+      { headers }
+    );
+
+    return res.json({ message: "Commit realizado com sucesso", commitSha: newCommitSha });
+  } catch (error) {
+    console.error("Erro ao fazer commit:", error.response?.data || error.message);
+    return res.status(500).json({
+      error: "Erro ao fazer commit",
+      details: error.response?.data || error.message,
+    });
+  }
+};
