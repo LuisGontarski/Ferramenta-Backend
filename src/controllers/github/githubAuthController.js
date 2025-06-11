@@ -8,6 +8,7 @@ exports.githubCallback = async (req, res) => {
   }
 
   try {
+    // Troca o code pelo access_token
     const tokenResponse = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -25,15 +26,16 @@ exports.githubCallback = async (req, res) => {
       return res.status(400).send("Não foi possível obter o token de acesso");
     }
 
-    // ✅ Redireciona para o frontend após login com sucesso
-    res.redirect("http://localhost:5173");
+    // Redireciona o usuário para o frontend, com o token na URL
+    res.redirect(`http://localhost:5173?access_token=${accessToken}`);
+    console.log("Token de acesso obtido com sucesso:", accessToken);
   } catch (error) {
     console.error("Erro ao trocar code por token:", error.message);
     res.status(500).send("Erro interno no servidor");
   }
 };
 
-exports.githubLogin = (req, res) => {
+exports.githubLogin = (_req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const redirectUri =
     "https://ferramenta-backend.onrender.com/api/auth/github/callback";
@@ -43,4 +45,31 @@ exports.githubLogin = (req, res) => {
   )}&scope=repo,user`;
 
   res.redirect(githubAuthUrl);
+};
+
+exports.getUserRepositories = async (req, res) => {
+  const accessToken = req.headers.authorization?.replace("Bearer ", "");
+
+  if (!accessToken) {
+    return res.status(401).json({ message: "Token de acesso não fornecido" });
+  }
+
+  try {
+    const response = await axios.get("https://api.github.com/user/repos", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Erro ao buscar repositórios:", {
+      message: error.message,
+      responseData: error.response?.data,
+      status: error.response?.status,
+    });
+
+    res.status(500).json({ message: "Erro ao buscar repositórios" });
+  }
 };
