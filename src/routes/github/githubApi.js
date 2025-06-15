@@ -12,4 +12,12 @@ router.get("/github/repos", githubAuthController.getUserRepositories);
 
 router.post("/github/commit", githubAuthController.postCommitFile);
 
+router.post("/github/create/repo", githubAuthController.postCreateRepo);
+router.delete("/github/delete/repo", githubAuthController.deleteRepo);
+
+router.put("/github/commit", githubController.commitFile);
+
+
+
+
 module.exports = router;
