@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -16,6 +16,9 @@ app.use('/api', githubApiRoutes);
 
 const projectRoutes = require('./routes/project/project');
 app.use('/api', projectRoutes);
+
+const equipeRoutes = require('./routes/equipe/equipe');
+app.use('/api', equipeRoutes);
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

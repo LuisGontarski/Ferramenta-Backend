@@ -85,7 +85,8 @@ exports.getUserRepositories = async (req, res) => {
 };
 
 exports.postCommitFile = async (req, res) => {
-  const { access_token, owner, repo, filePath, content, commitMessage } = req.body;
+  const { access_token, owner, repo, filePath, content, commitMessage } =
+    req.body;
 
   const headers = {
     Authorization: `Bearer ${access_token}`,
@@ -151,9 +152,15 @@ exports.postCommitFile = async (req, res) => {
       { headers }
     );
 
-    return res.json({ message: "Commit realizado com sucesso", commitSha: newCommitSha });
+    return res.json({
+      message: "Commit realizado com sucesso",
+      commitSha: newCommitSha,
+    });
   } catch (error) {
-    console.error("Erro ao fazer commit:", error.response?.data || error.message);
+    console.error(
+      "Erro ao fazer commit:",
+      error.response?.data || error.message
+    );
     return res.status(500).json({
       error: "Erro ao fazer commit",
       details: error.response?.data || error.message,
@@ -185,7 +192,10 @@ exports.postCreateRepo = async (req, res) => {
       repository: response.data,
     });
   } catch (error) {
-    console.error("Erro ao criar repositório:", error.response?.data || error.message);
+    console.error(
+      "Erro ao criar repositório:",
+      error.response?.data || error.message
+    );
     return res.status(500).json({
       error: "Erro ao criar repositório",
       details: error.response?.data || error.message,
@@ -200,12 +210,13 @@ exports.postCreateRepo = async (req, res) => {
 //   "isPrivate": false
 // }
 
-
 exports.deleteRepo = async (req, res) => {
   const { access_token, owner, repoName } = req.body;
 
   if (!access_token || !owner || !repoName) {
-    return res.status(400).json({ message: "Parâmetros obrigatórios ausentes" });
+    return res
+      .status(400)
+      .json({ message: "Parâmetros obrigatórios ausentes" });
   }
 
   const headers = {
@@ -218,9 +229,14 @@ exports.deleteRepo = async (req, res) => {
       headers,
     });
 
-    return res.status(200).json({ message: `Repositório '${repoName}' deletado com sucesso.` });
+    return res
+      .status(200)
+      .json({ message: `Repositório '${repoName}' deletado com sucesso.` });
   } catch (error) {
-    console.error("Erro ao deletar repositório:", error.response?.data || error.message);
+    console.error(
+      "Erro ao deletar repositório:",
+      error.response?.data || error.message
+    );
     return res.status(500).json({
       message: "Erro ao deletar repositório",
       details: error.response?.data || error.message,
@@ -234,3 +250,41 @@ exports.deleteRepo = async (req, res) => {
 //   "repoName": "nome-do-repositorio"
 // }
 
+exports.getRepoStatus = async (req, res) => {
+  const { owner, repo } = req.params;
+  const accessToken = req.headers.authorization?.split(" ")[1];
+
+  try {
+    const response = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      }
+    );
+
+    res.json({
+      name: response.data.name,
+      private: response.data.private,
+      default_branch: response.data.default_branch,
+      updated_at: response.data.updated_at,
+      pushed_at: response.data.pushed_at,
+      open_issues: response.data.open_issues_count,
+      forks: response.data.forks,
+      stargazers_count: response.data.stargazers_count,
+    });
+  } catch (error) {
+    console.error(
+      "Erro ao buscar status do repositório:",
+      error.response?.data || error.message
+    );
+    res.status(500).json({
+      message: "Erro ao buscar status do repositório",
+      error: error.response?.data || error.message,
+    });
+  }
+};
+
+// http://localhost:3000/api/repos/<OWNER>/<REPO>/status
