@@ -37,7 +37,7 @@ exports.githubCallback = async (req, res) => {
       return res.json({ access_token: accessToken });
     } else {
       // Redireciona para o frontend com o token como parâmetro na URL
-      return res.redirect(`http://localhost:5173?access_token=${accessToken}`);
+      return res.redirect(`http://localhost:5173/login?access_token=${accessToken}`);
     }
   } catch (error) {
     console.error("Erro ao trocar code por token:", error.message);
