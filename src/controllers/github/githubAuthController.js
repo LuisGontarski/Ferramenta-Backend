@@ -48,7 +48,7 @@ exports.githubCallback = async (req, res) => {
 exports.githubLogin = (_req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const redirectUri =
-    "https://ferramenta-backend.onrender.com/api/auth/github/callback";
+    "http://localhost:3000/api/auth/github/callback";
 
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
     redirectUri
