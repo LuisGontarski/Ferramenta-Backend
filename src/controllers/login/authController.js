@@ -59,6 +59,7 @@ exports.postAuthLogin = async (req, res) => {
     res.json({
       token: token,
       usuario_id: user.usuario_id,
+      cargo: user.cargo,
     });
 
     // console.log("Usuário logado com sucesso:", user.id);
