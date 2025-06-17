@@ -20,6 +20,9 @@ app.use('/api', projectRoutes);
 const equipeRoutes = require('./routes/equipe/equipe');
 app.use('/api', equipeRoutes);
 
+const tarefaRoutes = require('./routes/tarefa/tarefa');
+app.use('/api', tarefaRoutes);
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

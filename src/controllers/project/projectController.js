@@ -15,7 +15,7 @@ exports.getAllProjects = async (_req, res) => {
 };
 
 exports.postCreateProject = async (req, res) => {
-  const { nome, descricao, data_inicio, data_fim, repositorio } = req.body;
+  const { nome, descricao, data_inicio, data_fim, nome_equipe } = req.body;
 
   if (!nome || !descricao || !data_inicio || !data_fim) {
     return res
@@ -45,7 +45,7 @@ exports.postCreateProject = async (req, res) => {
       descricao,
       data_inicio,
       data_fim,
-      repositorio,
+      nome_equipe,
     });
     if (!novoProjeto) {
       return res.status(500).json({ message: "Erro ao criar projeto." });

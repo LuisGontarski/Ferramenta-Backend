@@ -59,6 +59,8 @@ exports.postAuthLogin = async (req, res) => {
     res.json({
       token: token,
       usuario_id: user.usuario_id,
+      cargo: user.cargo,
+      github_token: user.github_token,
     });
 
     // console.log("Usuário logado com sucesso:", user.id);
@@ -147,11 +149,13 @@ exports.postCreateUser = async (req, res) => {
       cargo: userDTO.cargo,
       github: userDTO.github,
       foto_perfil: userDTO.foto_perfil,
+      github_token: userDTO.github_token,
     });
 
     res.status(201).json({
       message: "Usuário registrado com sucesso!",
       usuario_id: newUser.usuario_id,
+      github_token: newUser.github_token,
     });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);

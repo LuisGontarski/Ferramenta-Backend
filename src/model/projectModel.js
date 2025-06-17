@@ -22,14 +22,14 @@ async function getProjectsById(id) {
   return result.rows[0];
 }
 
-async function createProject({ nome, descricao, data_inicio, data_fim }) {
+async function createProject({ nome, descricao, data_inicio, data_fim, nome_equipe}) {
   const projeto_id = uuidv4();
   const query = `
-    INSERT INTO projeto (projeto_id, nome, descricao, data_inicio, data_fim_prevista)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO projeto (projeto_id, nome, descricao, data_inicio, data_fim_prevista, nome_equipe)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING projeto_id;
   `;
-  const values = [projeto_id, nome, descricao, data_inicio, data_fim];
+  const values = [projeto_id, nome, descricao, data_inicio, data_fim, nome_equipe];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];

@@ -9,6 +9,7 @@ class UserDTO {
     github,
     foto_perfil,
     criado_em,
+    github_token,
   }) {
     this.usuario_id = usuario_id;
     this.nome_usuario = nome_usuario;
@@ -18,6 +19,7 @@ class UserDTO {
     this.github = github;
     this.foto_perfil = foto_perfil;
     this.criado_em = criado_em;
+    this.github_token = github_token; // Adicionado para manter a consistência com o JSON de teste
   }
 
   isValid() {

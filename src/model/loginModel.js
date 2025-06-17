@@ -21,17 +21,17 @@ async function getUserById(usuario_id) {
   return result.rows[0];
 }
 
-async function createUser({ nome, email, senha, cargo, github, foto_perfil }) {
+async function createUser({ nome, email, senha, cargo, github, foto_perfil, github_token }) {
   const id = uuidv4();
 
   const query = `
     INSERT INTO usuario (
-      usuario_id, nome_usuario, email, senha, cargo, github, foto_perfil
+      usuario_id, nome_usuario, email, senha, cargo, github, foto_perfil, github_token
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING usuario_id;
   `;
-  const values = [id, nome, email, senha, cargo, github, foto_perfil];
+  const values = [id, nome, email, senha, cargo, github, foto_perfil, github_token];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];
