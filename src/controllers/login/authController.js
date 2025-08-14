@@ -40,26 +40,21 @@ exports.postAuthLogin = async (req, res) => {
       return res.status(401).json({ message: "Credenciais inválidas" });
     }
 
-    const senhaValida = user.senha;
+    const senhaValida = await bcrypt.compare(senha, user.senha);
     if (!senhaValida) {
       return res.status(401).json({ message: "Credenciais inválidas" });
     }
-
-    if (senhaValida !== senha) {
-      // Senha incorreta
-      return res.status(401).json({ message: "Credenciais inválidas" });
-    }
-
+    
     const token = jwt.sign(
       { id: user.usuario_id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
-    );
+    );  
 
     res.json({
       token: token,
       usuario_id: user.usuario_id,
-      cargo: user.cargo,
+      cargo: user.cargo,  
       github_token: user.github_token,
     });
 
