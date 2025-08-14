@@ -23,6 +23,9 @@ app.use('/api', equipeRoutes);
 const tarefaRoutes = require('./routes/tarefa/tarefa');
 app.use('/api', tarefaRoutes);
 
+const commitRoutes = require('./routes/commit/commit');
+app.use('/api', commitRoutes);
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
