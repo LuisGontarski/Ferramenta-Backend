@@ -40,13 +40,13 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 // Socket.io
 io.on("connection", (socket) => {
-  console.log("Novo usuário conectado");
+  // console.log("Novo usuário conectado")
 
   // Entrar na sala do projeto
   socket.on("joinProject", (projeto_id) => {
     if (projeto_id) {
       socket.join(projeto_id);
-      console.log(`Usuário entrou na sala do projeto: ${projeto_id}`);
+      // console.log(`Usuário entrou na sala do projeto: ${projeto_id}`);
     }
   });
 
@@ -56,7 +56,7 @@ io.on("connection", (socket) => {
       const { usuario_id, projeto_id, texto, usuario_nome } = data;
 
       if (!usuario_id || !projeto_id || !texto) {
-        console.error("Dados inválidos enviados pelo frontend:", data);
+        // console.error("Dados inválidos enviados pelo frontend:", data);
         return;
       }
 
@@ -75,13 +75,13 @@ io.on("connection", (socket) => {
         data_envio: mensagemSalva.criado_em,
       });
     } catch (err) {
-      console.error("Erro ao enviar mensagem via socket:", err);
+      // console.error("Erro ao enviar mensagem via socket:", err);
     }
   });
 
   // Desconexão
   socket.on("disconnect", () => {
-    console.log("Usuário desconectado");
+    // console.log("Usuário desconectado");
   });
 });
 
