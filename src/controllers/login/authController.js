@@ -7,8 +7,59 @@ const { createUser, emailExists } = require("../../model/loginModel");
 const { updateUser } = require("../../model/loginModel");
 const { deleteUser } = require("../../model/loginModel");
 const { getAllUsers } = require("../../model/loginModel");
+const { updateGithubUsername } = require("../../model/loginModel");
+const { getGithubUsernameFromToken } = require("../../model/loginModel");
 const formatDateToDDMMYYYY = require("../../utils/ft_dateUtils");
 const ft_validator = require("../../utils/validatorUtils");
+
+exports.checkUserGithubExists = async (req, res) => {
+  const { usuario_id } = req.params;
+
+  if (!usuario_id) {
+    return res.status(400).json({ message: "usuario_id é obrigatório." });
+  }
+
+  try {
+    const user = await getUserById(usuario_id); // Função do model já existente
+
+    const exists = !!user; // true se usuário existe, false caso contrário
+
+    res.status(200).json({ exists });
+  } catch (err) {
+    console.error("Erro ao verificar existência do usuário:", err);
+    res.status(500).json({ message: "Erro ao verificar usuário." });
+  }
+};
+
+exports.updateUserGithub = async (req, res) => {
+  const { usuario_id, github_token } = req.body;
+
+  if (!usuario_id || !github_token) {
+    return res.status(400).json({ message: "usuario_id e github_token são obrigatórios." });
+  }
+
+  try {
+    // Busca username no GitHub usando o token
+    const githubUsername = await getGithubUsernameFromToken(github_token);
+
+    // Atualiza token e username no banco
+    const updatedUser = await updateGithubUsername(usuario_id, githubUsername, github_token);
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    res.status(200).json({
+      message: "GitHub integrado com sucesso!",
+      usuario_id: updatedUser.usuario_id,
+      github_token: updatedUser.github_token,
+      github: updatedUser.github,
+    });
+  } catch (err) {
+    console.error("Erro ao integrar GitHub:", err);
+    res.status(500).json({ message: "Erro ao integrar GitHub." });
+  }
+};
 
 exports.getAllUsers = async (_req, res) => {
   try {
@@ -44,17 +95,17 @@ exports.postAuthLogin = async (req, res) => {
     if (!senhaValida) {
       return res.status(401).json({ message: "Credenciais inválidas" });
     }
-    
+
     const token = jwt.sign(
       { id: user.usuario_id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
-    );  
+    );
 
     res.json({
       token: token,
       usuario_id: user.usuario_id,
-      cargo: user.cargo,  
+      cargo: user.cargo,
       github_token: user.github_token,
     });
 
@@ -73,15 +124,31 @@ exports.getUserById = async (req, res) => {
   }
 
   try {
-    // console.log("ID do usuário:", usuario_id);-
+    // Busca usuário no banco
     const user = await getUserById(usuario_id);
 
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
 
+    // Atualiza github se houver token
+    if (user.github_token) {
+      try {
+        const githubUsername = await getGithubUsernameFromToken(
+          user.github_token
+        );
+        if (githubUsername && githubUsername !== user.github) {
+          await updateGithubUsername(usuario_id, githubUsername);
+          user.github = githubUsername; // atualiza no objeto retornado
+        }
+      } catch (err) {
+        console.error("Erro ao buscar GitHub username:", err.message);
+        // Não impede resposta ao front
+      }
+    }
+
     const userDTO = new UserDTO(user);
-    const { senha, ...userSemSenha } = userDTO;
+    const { senha, github_token, ...userSemSenha } = userDTO;
 
     res.status(200).json(userSemSenha);
   } catch (error) {

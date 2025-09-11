@@ -1,14 +1,19 @@
 const axios = require("axios");
 
 exports.githubCallback = async (req, res) => {
-  const code = req.query.code;
+  const { code, error } = req.query;
+
+  if (error) {
+    console.error("Erro do GitHub:", error);
+    return res.redirect("http://localhost:5173/github-success"); // sem token = erro
+  }
 
   if (!code) {
-    return res.status(400).send("Código de autorização não encontrado");
+    console.error("Código de autorização não encontrado");
+    return res.redirect("http://localhost:5173/github-success"); // sem token = erro
   }
 
   try {
-    // Troca o code por access_token
     const tokenResponse = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -16,39 +21,29 @@ exports.githubCallback = async (req, res) => {
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code: code,
       },
-      {
-        headers: { Accept: "application/json" },
-      }
+      { headers: { Accept: "application/json" } }
     );
 
     const accessToken = tokenResponse.data.access_token;
+
     if (!accessToken) {
-      return res.status(400).send("Não foi possível obter o token de acesso");
+      console.error("Não foi possível obter o token");
+      return res.redirect("http://localhost:5173/github-success"); // erro
     }
 
-    console.log("Token de acesso obtido com sucesso:", accessToken);
-
-    // Detecta se a requisição foi feita pelo navegador ou API
-    const acceptHeader = req.headers.accept || "";
-    const isApiRequest = acceptHeader.includes("application/json");
-
-    if (isApiRequest) {
-      // Retorna como JSON (ideal para Postman ou fetch do frontend)
-      return res.json({ access_token: accessToken });
-    } else {
-      // Redireciona para o frontend com o token como parâmetro na URL
-      return res.redirect(`http://localhost:5173/login?access_token=${accessToken}`);
-    }
-  } catch (error) {
-    console.error("Erro ao trocar code por token:", error.message);
-    return res.status(500).send("Erro interno no servidor");
+    console.log("Token obtido:", accessToken);
+    return res.redirect(
+      `http://localhost:5173/github-success-integration?github_token=${accessToken}`
+    );
+  } catch (err) {
+    console.error("Erro ao trocar code por token:", err.message);
+    return res.redirect("http://localhost:5173/github-success"); // erro
   }
 };
 
 exports.githubLogin = (_req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri =
-    "http://localhost:3000/api/auth/github/callback";
+  const redirectUri = "http://localhost:3000/api/auth/github/callback";
 
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
     redirectUri

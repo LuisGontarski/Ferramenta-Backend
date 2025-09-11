@@ -1,5 +1,6 @@
 const pool = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
+const axios = require("axios");
 
 async function getAllUsers() {
   const query = `SELECT * FROM usuario`;
@@ -21,7 +22,40 @@ async function getUserById(usuario_id) {
   return result.rows[0];
 }
 
-async function createUser({ nome, email, senha, cargo, github, foto_perfil, github_token }) {
+// Atualiza apenas o campo github do usuário
+async function updateGithubUsername(usuario_id, github, github_token) {
+  const query = `
+    UPDATE usuario
+    SET github = $2, github_token = $3
+    WHERE usuario_id = $1
+    RETURNING usuario_id, github_token, github
+  `;
+  const values = [usuario_id, github, github_token];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+}
+
+// Consulta GitHub pelo token
+async function getGithubUsernameFromToken(github_token) {
+  try {
+    const response = await axios.get("https://api.github.com/user", {
+      headers: { Authorization: `token ${github_token}` },
+    });
+    return response.data.login;
+  } catch (err) {
+    console.error("Erro ao buscar GitHub username:", err);
+    return null;
+  }
+}
+async function createUser({
+  nome,
+  email,
+  senha,
+  cargo,
+  github,
+  foto_perfil,
+  github_token,
+}) {
   const id = uuidv4();
 
   const query = `
@@ -31,7 +65,16 @@ async function createUser({ nome, email, senha, cargo, github, foto_perfil, gith
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING usuario_id;
   `;
-  const values = [id, nome, email, senha, cargo, github, foto_perfil, github_token];
+  const values = [
+    id,
+    nome,
+    email,
+    senha,
+    cargo,
+    github,
+    foto_perfil,
+    github_token,
+  ];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -41,7 +84,15 @@ async function createUser({ nome, email, senha, cargo, github, foto_perfil, gith
   }
 }
 
-async function updateUser({ id, nome, email, senha, cargo, github, foto_perfil }) {
+async function updateUser({
+  id,
+  nome,
+  email,
+  senha,
+  cargo,
+  github,
+  foto_perfil,
+}) {
   const query = `
     UPDATE usuario
     SET
@@ -86,4 +137,6 @@ module.exports = {
   updateUser,
   deleteUser,
   getAllUsers,
+  updateGithubUsername,
+  getGithubUsernameFromToken,
 };
