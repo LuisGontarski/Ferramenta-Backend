@@ -10,6 +10,7 @@ const { getAllUsers } = require("../../model/loginModel");
 const { updateGithubUsername } = require("../../model/loginModel");
 const { getGithubUsernameFromToken } = require("../../model/loginModel");
 const formatDateToDDMMYYYY = require("../../utils/ft_dateUtils");
+const { getUsuariosComGithub } = require("../../model/loginModel");
 const ft_validator = require("../../utils/validatorUtils");
 
 exports.checkUserGithubExists = async (req, res) => {
@@ -35,7 +36,9 @@ exports.updateUserGithub = async (req, res) => {
   const { usuario_id, github_token } = req.body;
 
   if (!usuario_id || !github_token) {
-    return res.status(400).json({ message: "usuario_id e github_token são obrigatórios." });
+    return res
+      .status(400)
+      .json({ message: "usuario_id e github_token são obrigatórios." });
   }
 
   try {
@@ -43,7 +46,11 @@ exports.updateUserGithub = async (req, res) => {
     const githubUsername = await getGithubUsernameFromToken(github_token);
 
     // Atualiza token e username no banco
-    const updatedUser = await updateGithubUsername(usuario_id, githubUsername, github_token);
+    const updatedUser = await updateGithubUsername(
+      usuario_id,
+      githubUsername,
+      github_token
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ message: "Usuário não encontrado." });
@@ -291,6 +298,16 @@ exports.deleteUser = async (req, res) => {
     res.status(200).json({ message: "Usuário deletado com sucesso!" });
   } catch (error) {
     console.error("Erro ao deletar usuário:", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+};
+
+exports.getUsuariosComGithub = async (req, res) => {
+  try {
+    const usuarios = await getUsuariosComGithub();
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error("Erro ao buscar usuários:", error);
     res.status(500).json({ message: "Erro interno do servidor." });
   }
 };

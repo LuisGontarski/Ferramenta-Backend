@@ -14,6 +14,8 @@ router.delete('/user/:id', authController.deleteUser);
 router.put('/user/github/update', authController.updateUserGithub);
 router.get('/user/github/exists/:usuario_id', authController.checkUserGithubExists);
 
+router.get("/user/list/github", authController.getUsuariosComGithub);
+
 
 
 module.exports = router;

@@ -130,6 +130,16 @@ async function deleteUser(id) {
   return result.rows[0]; // Retorna o ID do usuário deletado
 }
 
+async function getUsuariosComGithub() {
+  const query = `
+    SELECT usuario_id, nome_usuario, email, github
+    FROM usuario
+    WHERE github IS NOT NULL AND github <> ''
+  `;
+  const result = await pool.query(query);
+  return result.rows;
+}
+
 module.exports = {
   getUserByEmail,
   getUserById,
@@ -139,4 +149,5 @@ module.exports = {
   getAllUsers,
   updateGithubUsername,
   getGithubUsernameFromToken,
+  getUsuariosComGithub,
 };
