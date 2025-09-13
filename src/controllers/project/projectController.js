@@ -1,8 +1,11 @@
 const { getAllProjects } = require("../../model/projectModel");
 const { createProject } = require("../../model/projectModel");
-const { getProjectsById } = require("../../model/projectModel");
+const { validate: isUuid } = require("uuid");
+const { createProjectWithTeams } = require("../../model/projectModel");
 const { updateProject } = require("../../model/projectModel");
-const { deleteProject } = require("../../model/projectModel");
+const { getProjectsByUser } = require("../../model/projectModel");
+const { getProjectById } = require("../../model/projectModel");
+const { deleteProjectById } = require("../../model/projectModel");
 
 exports.getAllProjects = async (_req, res) => {
   try {
@@ -15,41 +18,96 @@ exports.getAllProjects = async (_req, res) => {
 };
 
 exports.postCreateProject = async (req, res) => {
-  const { nome, descricao, data_inicio, data_fim, nome_equipe } = req.body;
+  const {
+    nome,
+    descricao,
+    data_inicio,
+    data_fim,
+    status,
+    equipes,
+    criador_id,
+  } = req.body;
 
-  if (!nome || !descricao || !data_inicio || !data_fim) {
+  // 1️⃣ Valida campos obrigatórios
+  if (!criador_id || !isUuid(criador_id)) {
+    return res.status(400).json({ message: "Usuário inválido." });
+  }
+
+  if (!nome?.trim() || !descricao?.trim() || !data_inicio || !data_fim) {
     return res
       .status(400)
       .json({ message: "Todos os campos obrigatórios devem ser preenchidos." });
   }
 
-  if (typeof nome !== "string" || nome.trim() === "") {
-    return res.status(400).json({ message: "Nome inválido." });
+  if (typeof nome !== "string" || nome.trim().length === 0) {
+    return res.status(400).json({ message: "Nome do projeto inválido." });
   }
 
-  if (typeof descricao !== "string" || descricao.trim() === "") {
-    return res.status(400).json({ message: "Descrição inválida." });
+  if (typeof descricao !== "string" || descricao.trim().length === 0) {
+    return res.status(400).json({ message: "Descrição do projeto inválida." });
   }
 
-  if (typeof data_inicio !== "string" || !Date.parse(data_inicio)) {
+  if (!Date.parse(data_inicio)) {
     return res.status(400).json({ message: "Data de início inválida." });
   }
 
-  if (typeof data_fim !== "string" || !Date.parse(data_fim)) {
+  if (!Date.parse(data_fim)) {
     return res.status(400).json({ message: "Data de fim inválida." });
   }
 
+  if (new Date(data_inicio) > new Date(data_fim)) {
+    return res
+      .status(400)
+      .json({ message: "Data de início não pode ser maior que data de fim." });
+  }
+
+  if (criador_id && !isUuid(criador_id)) {
+    return res.status(400).json({ message: "ID do criador inválido." });
+  }
+
+  // 2️⃣ Valida equipes
+  if (!Array.isArray(equipes) || equipes.length === 0) {
+    return res
+      .status(400)
+      .json({ message: "Deve ser enviada pelo menos uma equipe." });
+  }
+
+  for (const equipe of equipes) {
+    if (!equipe.nome || !equipe.nome.trim()) {
+      return res
+        .status(400)
+        .json({ message: "Cada equipe deve ter um nome válido." });
+    }
+
+    if (equipe.usuarios) {
+      if (!Array.isArray(equipe.usuarios)) {
+        return res
+          .status(400)
+          .json({ message: "Lista de usuários deve ser um array." });
+      }
+
+      for (const usuario_id of equipe.usuarios) {
+        if (!isUuid(usuario_id)) {
+          return res
+            .status(400)
+            .json({ message: `ID de usuário inválido: ${usuario_id}` });
+        }
+      }
+    }
+  }
+
+  // 3️⃣ Criação do projeto e equipes
   try {
-    const novoProjeto = await createProject({
+    const novoProjeto = await createProjectWithTeams({
       nome,
       descricao,
       data_inicio,
       data_fim,
-      nome_equipe,
+      status,
+      criador_id,
+      equipes,
     });
-    if (!novoProjeto) {
-      return res.status(500).json({ message: "Erro ao criar projeto." });
-    }
+
     res.status(201).json({
       message: "Projeto criado com sucesso!",
       projeto_id: novoProjeto.projeto_id,
@@ -60,83 +118,89 @@ exports.postCreateProject = async (req, res) => {
   }
 };
 
-// GET /projects
-exports.getProjectsById = (req, res) => {
+exports.getProjectById = async (req, res) => {
   const { id } = req.params;
-  if (id != fakeProject.id) {
-    return res.status(404).json({ message: "ID do projeto não encontrado." });
+
+  if (!id) {
+    return res.status(400).json({ message: "ID do projeto não informado." });
   }
-  res.json({
-    id: fakeProject.id,
-    nome: fakeProject.nome,
-    descricao: fakeProject.descricao,
-  });
+
+  try {
+    const projeto = await getProjectById(id);
+
+    if (!projeto) {
+      return res.status(404).json({ message: "Projeto não encontrado." });
+    }
+
+    res.status(200).json(projeto);
+  } catch (error) {
+    console.error("Erro ao buscar projeto por ID:", error);
+    res.status(500).json({ message: "Erro interno ao buscar projeto." });
+  }
+};
+
+exports.getProjectsByUser = async (req, res) => {
+  const { usuario_id } = req.params;
+
+  if (!usuario_id) {
+    return res.status(400).json({ message: "Usuário não informado." });
+  }
+
+  try {
+    const projetos = await getProjectsByUser(usuario_id);
+    res.status(200).json(projetos);
+  } catch (error) {
+    console.error("Erro ao buscar projetos do usuário:", error);
+    res.status(500).json({ message: "Erro interno ao buscar projetos." });
+  }
 };
 
 // PUT /projects
 exports.putUpdateProject = async (req, res) => {
-  const { projeto_id } = req.params;
-  const { nome, descricao, data_inicio, data_fim } = req.body;
+  const { projeto_id } = req.params; // vem da URL
+  const { nome, descricao, data_inicio, data_fim_prevista, status } = req.body; // vem do body
 
-  if (!projeto_id) {
-    return res.status(400).json({ message: "ID do projeto é obrigatório." });
-  }
-  if (!nome || !descricao || !data_inicio || !data_fim) {
-    return res
-      .status(400)
-      .json({ message: "Todos os campos obrigatórios devem ser preenchidos." });
-  }
-  if (typeof nome !== "string" || nome.trim() === "") {
-    return res.status(400).json({ message: "Nome inválido." });
-  }
-  if (typeof descricao !== "string" || descricao.trim() === "") {
-    return res.status(400).json({ message: "Descrição inválida." });
-  }
-  if (typeof data_inicio !== "string" || !Date.parse(data_inicio)) {
-    return res.status(400).json({ message: "Data de início inválida." });
-  }
-  if (typeof data_fim !== "string" || !Date.parse(data_fim)) {
-    return res.status(400).json({ message: "Data de fim inválida." });
-  }
+  if (!projeto_id)
+    return res.status(400).json({ error: "ID do projeto não informado" });
 
   try {
-    const projectUpdated = await updateProject({
-      projeto_id,
+    const updated = await updateProject(projeto_id, {
       nome,
       descricao,
       data_inicio,
-      data_fim,
+      data_fim_prevista,
+      status,
     });
 
-    if (!projectUpdated) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
-    }
+    if (!updated)
+      return res.status(404).json({ error: "Projeto não encontrado" });
 
-    res.status(200).json({ message: "Projeto atualizado com sucesso!" });
-  } catch (error) {
-    console.error("Erro ao atualizar projeto:", error);
-    res.status(500).json({ message: "Erro interno ao atualizar projeto." });
+    return res.json({
+      message: "Projeto atualizado com sucesso",
+      projeto: updated,
+    });
+  } catch (err) {
+    console.error("Erro ao atualizar projeto:", err);
+    return res.status(500).json({ error: "Erro ao atualizar projeto" });
   }
 };
 
 // DELETE /projects
-exports.deleteProject = (req, res) => {
-  const { id } = req.params;
+exports.deleteProject = async (req, res) => {
+  const { projeto_id } = req.params;
 
-  if (!id) {
-    return res.status(400).json({ message: "ID do projeto é obrigatório." });
+  if (!projeto_id) {
+    return res.status(400).json({ error: "ID do projeto é obrigatório" });
   }
 
   try {
-    const projectDeleted = deleteProject(id);
-
-    if (!projectDeleted) {
-      return res.status(404).json({ message: "Projeto nao encontrado." });
+    const deleted = await deleteProjectById(projeto_id);
+    if (!deleted) {
+      return res.status(404).json({ error: "Projeto não encontrado" });
     }
-
-    res.status(200).json({ message: "Projeto deletado com sucesso!" });
-  } catch (error) {
-    console.error("Erro ao deletar projeto:", error);
-    res.status(500).json({ message: "Erro interno ao deletar projeto." });
+    return res.json({ message: "Projeto excluído com sucesso" });
+  } catch (err) {
+    console.error("Erro ao deletar projeto:", err);
+    return res.status(500).json({ error: "Erro ao deletar projeto" });
   }
 };

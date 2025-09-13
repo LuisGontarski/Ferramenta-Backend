@@ -5,12 +5,12 @@ exports.githubCallback = async (req, res) => {
 
   if (error) {
     console.error("Erro do GitHub:", error);
-    return res.redirect("http://localhost:5173/github-success"); // sem token = erro
+    return res.redirect("http://localhost:5173/github-error-integration"); // sem token = erro
   }
 
   if (!code) {
     console.error("Código de autorização não encontrado");
-    return res.redirect("http://localhost:5173/github-success"); // sem token = erro
+    return res.redirect("http://localhost:5173/github-error-integration"); // sem token = erro
   }
 
   try {
@@ -28,7 +28,7 @@ exports.githubCallback = async (req, res) => {
 
     if (!accessToken) {
       console.error("Não foi possível obter o token");
-      return res.redirect("http://localhost:5173/github-success"); // erro
+      return res.redirect("http://localhost:5173/github-error-integration"); // erro
     }
 
     console.log("Token obtido:", accessToken);
@@ -37,7 +37,7 @@ exports.githubCallback = async (req, res) => {
     );
   } catch (err) {
     console.error("Erro ao trocar code por token:", err.message);
-    return res.redirect("http://localhost:5173/github-success"); // erro
+    return res.redirect("http://localhost:5173/github-error-integration"); // erro
   }
 };
 
