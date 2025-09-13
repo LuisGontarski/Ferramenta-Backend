@@ -1,61 +1,52 @@
 const tarefaModel = require("../../model/tarefaModel");
 const { getEmailUsuario } = require("../../model/tarefaModel"); // pega o e-mail do usuário pelo ID
 const { enviarEmail } = require("../../email/email");
+const { insertTarefa } = require("../../model/tarefaModel");
 
 // Criar Tarefa
 exports.createTarefa = async (req, res) => {
   const {
     titulo,
     descricao,
-    responsavel_id,
+    status,
     prioridade,
     tipo,
-    data_inicio_prevista,
-    data_termino_prevista,
-    data_inicio_real,
-    data_termino_real,
+    data_inicio,
+    data_entrega,
     projeto_id,
-    nome,
+    responsavel_id,
+    criador_id,
+    story_points,
+    fase_tarefa,
+    sprint_id,
   } = req.body;
 
-  if (!titulo) {
-    return res.status(400).json({ message: "Título é obrigatório." });
+  // Validação básica
+  if (!titulo || !status || !projeto_id || !criador_id) {
+    return res.status(400).json({ message: "Campos obrigatórios faltando." });
   }
 
   try {
-    const tarefa = await tarefaModel.createTarefa({
+    const novaTarefa = await insertTarefa({
       titulo,
       descricao,
-      responsavel_id,
+      status,
       prioridade,
       tipo,
-      data_inicio_prevista,
-      data_termino_prevista,
-      data_inicio_real,
-      data_termino_real,
+      data_inicio,
+      data_entrega,
       projeto_id,
-      nome,
+      responsavel_id,
+      criador_id,
+      story_points,
+      fase_tarefa,
+      sprint_id,
     });
 
-    // Busca o e-mail do responsável no banco
-    const emailResponsavel = await getEmailUsuario(responsavel_id);
-
-    console.log("Email do responsável:", emailResponsavel);
-
-    if (emailResponsavel) {
-      await enviarEmail(
-        emailResponsavel,
-        "Nova tarefa atribuída",
-        `Olá, você recebeu uma nova tarefa: ${titulo} (prioridade: ${
-          prioridade || "não definida"
-        }).`
-      );
-    }
-
-    res.status(201).json(tarefa);
+    res.status(201).json(novaTarefa);
   } catch (error) {
-    console.error("Erro ao criar tarefa:", error.message);
-    res.status(500).json({ message: "Erro ao criar tarefa" });
+    console.error("Erro ao criar tarefa:", error);
+    res.status(500).json({ message: "Erro interno ao criar tarefa." });
   }
 };
 

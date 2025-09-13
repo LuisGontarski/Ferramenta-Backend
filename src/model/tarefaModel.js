@@ -2,54 +2,18 @@ const db = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
 
 // Criar Tarefa
-exports.createTarefa = async (fields) => {
-  const tarefa_id = uuidv4();
-  const {
-    titulo,
-    descricao,
-    responsavel_id,
-    prioridade,
-    tipo,
-    data_inicio_prevista,
-    data_termino_prevista,
-    data_inicio_real,
-    data_termino_real,
-    projeto_id,
-    nome
-  } = fields;
-
-  const result = await db.query(
-    `INSERT INTO tarefa (
-      tarefa_id, titulo, descricao, responsavel_id, prioridade, tipo,
-      data_inicio_prevista, data_termino_prevista, data_inicio_real, data_termino_real,
-      projeto_id, nome, data_criacao
-    )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
-    RETURNING *`,
-    [
-      tarefa_id, titulo, descricao, responsavel_id, prioridade, tipo,
-      data_inicio_prevista, data_termino_prevista, data_inicio_real, data_termino_real,
-      projeto_id, nome
-    ]
-  );
-
-  return result.rows[0];
-};
 
 // Listar todas as tarefas
 exports.getTarefas = async () => {
-  const result = await db.query(
-    `SELECT * FROM tarefa`
-  );
+  const result = await db.query(`SELECT * FROM tarefa`);
   return result.rows;
 };
 
 // Obter tarefa por ID
 exports.getTarefaById = async (id) => {
-  const result = await db.query(
-    `SELECT * FROM tarefa WHERE tarefa_id = $1`,
-    [id]
-  );
+  const result = await db.query(`SELECT * FROM tarefa WHERE tarefa_id = $1`, [
+    id,
+  ]);
   return result.rows[0];
 };
 
@@ -67,7 +31,7 @@ exports.updateTarefa = async (id, fields) => {
     data_termino_real,
     projeto_id,
     nome,
-    status
+    status,
   } = fields;
 
   const result = await db.query(
@@ -88,9 +52,19 @@ exports.updateTarefa = async (id, fields) => {
      WHERE tarefa_id = $13
      RETURNING *`,
     [
-      titulo, descricao, responsavel_id, prioridade, tipo,
-      data_inicio_prevista, data_termino_prevista, data_inicio_real, data_termino_real,
-      projeto_id, nome, status, id
+      titulo,
+      descricao,
+      responsavel_id,
+      prioridade,
+      tipo,
+      data_inicio_prevista,
+      data_termino_prevista,
+      data_inicio_real,
+      data_termino_real,
+      projeto_id,
+      nome,
+      status,
+      id,
     ]
   );
 
@@ -112,4 +86,54 @@ exports.deleteTarefa = async (id) => {
     [id]
   );
   return result.rows[0];
+};
+
+async function insertTarefa(tarefa) {
+  const query = `
+    INSERT INTO tarefa (
+      titulo,
+      descricao,
+      status,
+      prioridade,
+      tipo,
+      data_inicio,
+      data_entrega,
+      projeto_id,
+      responsavel_id,
+      criador_id,
+      story_points,
+      fase_tarefa,
+      sprint_id
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    RETURNING *;
+  `;
+
+  const values = [
+    tarefa.titulo,
+    tarefa.descricao || null,
+    tarefa.status,
+    tarefa.prioridade || null,
+    tarefa.tipo || null,
+    tarefa.data_inicio || null,
+    tarefa.data_entrega || null,
+    tarefa.projeto_id,
+    tarefa.responsavel_id || null,
+    tarefa.criador_id,
+    tarefa.story_points || null,
+    tarefa.fase_tarefa || null,
+    tarefa.sprint_id || null,
+  ];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error("Erro no model ao inserir tarefa:", error);
+    throw error;
+  }
+}
+
+module.exports = {
+  insertTarefa,
 };
