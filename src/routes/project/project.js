@@ -9,4 +9,6 @@ router.put('/projects/:projeto_id', projectController.putUpdateProject);
 router.delete('/projects/:projeto_id', projectController.deleteProject);
 router.get("/projects/user/:usuario_id", projectController.getProjectsByUser);
 
+router.get("/projects/:projeto_id/users", projectController.getProjectUsers);
+
 module.exports = router;

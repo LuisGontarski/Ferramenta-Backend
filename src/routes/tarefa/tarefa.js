@@ -8,4 +8,7 @@ router.get("/tarefas/:id", tarefaController.getTarefaById);
 router.put("/tarefas/:id", tarefaController.updateTarefa);
 router.delete("/tarefas/:id", tarefaController.deleteTarefa);
 
+router.get("/tarefas/sprint/:sprint_id", tarefaController.getTarefasBySprint);
+router.patch("/tarefas/:id", tarefaController.updatePatchTarefa);
+
 module.exports = router;

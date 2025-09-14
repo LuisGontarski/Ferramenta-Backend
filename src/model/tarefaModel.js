@@ -1,4 +1,4 @@
-const db = require("../db/db");
+const pool = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
 
 // Criar Tarefa
@@ -134,6 +134,42 @@ async function insertTarefa(tarefa) {
   }
 }
 
+async function listTarefasBySprint(sprint_id) {
+  const query = `
+    SELECT t.*, u.nome_usuario AS responsavel_nome
+    FROM tarefa t
+    LEFT JOIN usuario u ON t.responsavel_id = u.usuario_id
+    WHERE t.sprint_id = $1
+    ORDER BY t.data_inicio ASC;
+  `;
+
+  try {
+    const result = await pool.query(query, [sprint_id]);
+    return result.rows;
+  } catch (error) {
+    console.error("Erro no model ao listar tarefas por sprint:", error);
+    throw error;
+  }
+}
+
+async function updateFaseTarefa(tarefa_id, fase_tarefa) {
+  try {
+    const query = `
+      UPDATE tarefa
+      SET fase_tarefa = $1
+      WHERE tarefa_id = $2
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [fase_tarefa, tarefa_id]);
+    return result.rows[0];
+  } catch (err) {
+    console.error("Erro ao atualizar fase da tarefa no model:", err);
+    throw err;
+  }
+}
+
 module.exports = {
   insertTarefa,
+  listTarefasBySprint,
+  updateFaseTarefa,
 };

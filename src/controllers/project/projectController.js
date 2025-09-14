@@ -6,6 +6,7 @@ const { updateProject } = require("../../model/projectModel");
 const { getProjectsByUser } = require("../../model/projectModel");
 const { getProjectById } = require("../../model/projectModel");
 const { deleteProjectById } = require("../../model/projectModel");
+const { fetchProjectUsers } = require("../../model/projectModel");
 
 exports.getAllProjects = async (_req, res) => {
   try {
@@ -202,5 +203,24 @@ exports.deleteProject = async (req, res) => {
   } catch (err) {
     console.error("Erro ao deletar projeto:", err);
     return res.status(500).json({ error: "Erro ao deletar projeto" });
+  }
+};
+
+// GET /projects/:projetoId/users
+exports.getProjectUsers = async (req, res) => {
+  const { projeto_id } = req.params;
+
+  if (!projeto_id) {
+    return res.status(400).json({ message: "ID do projeto é obrigatório." });
+  }
+
+  try {
+    const users = await fetchProjectUsers(projeto_id);
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Erro ao obter usuários do projeto:", error);
+    res
+      .status(500)
+      .json({ message: "Erro interno ao buscar usuários do projeto." });
   }
 };

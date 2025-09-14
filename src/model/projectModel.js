@@ -166,7 +166,7 @@ async function getProjectsByUser(usuario_id) {
 
   try {
     const result = await pool.query(query, values);
-    console.log("Resultado da query getProjectsByUser:", result.rows);
+    // console.log("Resultado da query getProjectsByUser:", result.rows);
     return result.rows;
   } catch (error) {
     console.error("Erro no model ao buscar projetos do usuário:", error);
@@ -224,6 +224,26 @@ async function deleteProjectById(projeto_id) {
   }
 }
 
+// Buscar usuários de um projeto
+async function fetchProjectUsers(projetoId) {
+  const query = `
+    SELECT u.usuario_id, u.nome_usuario AS nome, u.email
+    FROM usuario u
+    JOIN usuario_projeto up ON up.usuario_id = u.usuario_id
+    WHERE up.projeto_id = $1
+  `;
+
+  const values = [projetoId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (error) {
+    console.error("Erro ao buscar usuários do projeto:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   getAllProjects,
   getProjectsById,
@@ -232,4 +252,5 @@ module.exports = {
   deleteProjectById,
   getProjectsByUser,
   getProjectById,
+  fetchProjectUsers,
 };
