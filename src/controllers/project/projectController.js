@@ -27,6 +27,7 @@ exports.postCreateProject = async (req, res) => {
     status,
     equipes,
     criador_id,
+    github_repo,
   } = req.body;
 
   // 1️⃣ Valida campos obrigatórios
@@ -107,6 +108,7 @@ exports.postCreateProject = async (req, res) => {
       status,
       criador_id,
       equipes,
+      github_repo,
     });
 
     res.status(201).json({

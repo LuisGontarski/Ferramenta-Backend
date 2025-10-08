@@ -16,6 +16,8 @@ router.get('/user/github/exists/:usuario_id', authController.checkUserGithubExis
 
 router.get("/user/list/github", authController.getUsuariosComGithub);
 
+router.get("/users/:id/repos", authController.getUserRepos);
+
 
 
 module.exports = router;

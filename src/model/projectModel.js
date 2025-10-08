@@ -30,6 +30,7 @@ async function createProjectWithTeams({
   status,
   criador_id,
   equipes,
+  github_repo, // <- ADICIONADO
 }) {
   const client = await pool.connect();
 
@@ -39,8 +40,8 @@ async function createProjectWithTeams({
     // 1️⃣ Criar projeto
     const projeto_id = uuidv4();
     const projetoQuery = `
-      INSERT INTO projeto (projeto_id, nome, descricao, data_inicio, data_fim_prevista, status, criador_id, atualizado_em)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+      INSERT INTO projeto (projeto_id, nome, descricao, data_inicio, data_fim_prevista, status, criador_id, github_repo, atualizado_em)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
       RETURNING projeto_id;
     `;
     await client.query(projetoQuery, [
@@ -51,6 +52,7 @@ async function createProjectWithTeams({
       data_fim,
       status,
       criador_id,
+      github_repo || null, // agora github_repo existe
     ]);
 
     // Inserir criador diretamente no projeto
