@@ -168,8 +168,80 @@ async function updateFaseTarefa(tarefa_id, fase_tarefa) {
   }
 }
 
+async function updateComentarioTarefa(tarefa_id, comentario) {
+  try {
+    const query = `
+      UPDATE tarefa
+      SET comentario = $1
+      WHERE tarefa_id = $2
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [comentario, tarefa_id]);
+    return result.rows[0];
+  } catch (err) {
+    console.error("Erro ao atualizar comentário da tarefa no model:", err);
+    throw err;
+  }
+}
+
 module.exports = {
   insertTarefa,
   listTarefasBySprint,
   updateFaseTarefa,
+  updateComentarioTarefa,
+};
+
+async function getObservacaoTarefa(tarefa_id) {
+  try {
+    const query = `
+      SELECT comentario
+      FROM tarefa
+      WHERE tarefa_id = $1;
+    `;
+    const result = await pool.query(query, [tarefa_id]);
+    return result.rows[0];
+  } catch (err) {
+    console.error("Erro ao buscar observação no model:", err);
+    throw err;
+  }
+}
+
+async function getProjetoById(projeto_id) {
+  try {
+    const query = `
+      SELECT github_repo, criador_id
+      FROM projeto
+      WHERE projeto_id = $1;
+    `;
+    const result = await pool.query(query, [projeto_id]);
+    return result.rows[0];
+  } catch (err) {
+    console.error("Erro ao buscar projeto no model:", err);
+    throw err;
+  }
+}
+
+async function getUsuarioById(usuario_id) {
+  try {
+    const query = `
+      SELECT github_token
+      FROM usuario
+      WHERE usuario_id = $1;
+    `;
+    const result = await pool.query(query, [usuario_id]);
+    return result.rows[0];
+  } catch (err) {
+    console.error("Erro ao buscar usuário no model:", err);
+    throw err;
+  }
+}
+
+module.exports = {
+  insertTarefa,
+  listTarefasBySprint,
+  updateFaseTarefa,
+  updateComentarioTarefa,
+  getObservacaoTarefa,
+  getProjetoById,
+  getUsuarioById, // adiciona aqui
 };

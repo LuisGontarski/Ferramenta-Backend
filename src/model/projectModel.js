@@ -246,6 +246,32 @@ async function fetchProjectUsers(projetoId) {
   }
 }
 
+const axios = require("axios");
+
+async function getCommitsByRepo(repoName) {
+  try {
+    const token = process.env.GITHUB_TOKEN;
+
+    const response = await axios.get(
+      `https://api.github.com/repos/LuisGontarski/${repoName}/commits?per_page=30`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response.data.map((c) => ({
+      hash_commit: c.sha,
+      mensagem: c.commit.message,
+      url_commit: c.html_url,
+      data_commit: c.commit.author.date,
+    }));
+  } catch (error) {
+    console.error("Erro ao buscar commits do GitHub:", error.message);
+    return [];
+  }
+} 
+
+
 module.exports = {
   getAllProjects,
   getProjectsById,
@@ -255,4 +281,5 @@ module.exports = {
   getProjectsByUser,
   getProjectById,
   fetchProjectUsers,
+  getCommitsByRepo,
 };

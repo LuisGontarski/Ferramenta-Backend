@@ -10,5 +10,8 @@ router.delete("/tarefas/:id", tarefaController.deleteTarefa);
 
 router.get("/tarefas/sprint/:sprint_id", tarefaController.getTarefasBySprint);
 router.patch("/tarefas/:id", tarefaController.updatePatchTarefa);
+router.patch("/tarefas/:id/comentario", tarefaController.updateComentarioTarefa);
+router.get("/tarefas/:tarefa_id/:projeto_id/observacao", tarefaController.getInformacoesTarefa);
+
 
 module.exports = router;

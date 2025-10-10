@@ -157,3 +157,137 @@ exports.updatePatchTarefa = async (req, res) => {
     res.status(500).json({ message: "Erro interno ao atualizar a tarefa." });
   }
 };
+
+exports.updateComentarioTarefa = async (req, res) => {
+  const { id } = req.params;
+  const { comentario } = req.body;
+
+  if (comentario === undefined) {
+    return res
+      .status(400)
+      .json({ message: "O campo comentario é obrigatório." });
+  }
+
+  try {
+    const updatedTarefa = await tarefaModel.updateComentarioTarefa(
+      id,
+      comentario
+    );
+    res.status(200).json(updatedTarefa);
+  } catch (err) {
+    console.error("Erro ao atualizar comentário da tarefa:", err);
+    res
+      .status(500)
+      .json({ message: "Erro interno ao atualizar o comentário." });
+  }
+};
+
+exports.getObservacaoTarefa = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const tarefa = await tarefaModel.getObservacaoTarefa(id);
+
+    if (!tarefa) {
+      return res.status(404).json({ message: "Tarefa não encontrada." });
+    }
+
+    // retorna o campo como "observacao"
+    res.status(200).json({ observacao: tarefa.comentario || "" });
+  } catch (err) {
+    console.error("Erro ao buscar observação da tarefa:", err);
+    res.status(500).json({ message: "Erro interno ao buscar observação." });
+  }
+};
+
+exports.getInformacoesTarefa = async (req, res) => {
+  const { tarefa_id, projeto_id } = req.params;
+
+  console.log("=== DEBUG: Início do getInformacoesTarefa ===");
+  console.log("tarefa_id:", tarefa_id);
+  console.log("projeto_id:", projeto_id);
+
+  try {
+    // 1️⃣ Buscar observação da tarefa
+    const tarefa = await tarefaModel.getObservacaoTarefa(tarefa_id);
+    if (!tarefa) {
+      console.error("Tarefa não encontrada");
+      return res.status(404).json({ message: "Tarefa não encontrada." });
+    }
+    console.log("Observação da tarefa encontrada:", tarefa.comentario);
+
+    // 2️⃣ Buscar informações do projeto
+    const projeto = await projetoModel.getProjetoById(projeto_id);
+    if (!projeto) {
+      console.error("Projeto não encontrado");
+      return res.status(400).json({ message: "Projeto não encontrado." });
+    }
+    console.log("Projeto encontrado:", projeto);
+
+    // 3️⃣ Verificar github_repo
+    if (!projeto.github_repo) {
+      console.error("Projeto sem github_repo configurado");
+      return res
+        .status(400)
+        .json({ message: "Projeto sem github_repo configurado." });
+    }
+
+    const [owner, repo] = projeto.github_repo.split("/");
+    if (!owner || !repo) {
+      console.error("github_repo inválido:", projeto.github_repo);
+      return res
+        .status(400)
+        .json({ message: "github_repo inválido. Use o formato owner/repo." });
+    }
+
+    // 4️⃣ Buscar usuário responsável pelo projeto para pegar token
+    const usuario = await usuarioModel.getUsuarioById(projeto.criador_id);
+    if (!usuario || !usuario.github_token) {
+      console.error("Usuário sem github_token válido");
+      return res
+        .status(400)
+        .json({ message: "Usuário sem github_token configurado." });
+    }
+    console.log("Token GitHub do usuário encontrado");
+
+    // 5️⃣ Buscar commits do GitHub
+    const githubResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/commits`,
+      {
+        headers: {
+          Authorization: `token ${usuario.github_token}`,
+          "User-Agent": "MeuApp",
+        },
+      }
+    );
+
+    if (!githubResponse.ok) {
+      const text = await githubResponse.text();
+      console.error("GitHub API error:", githubResponse.status, text);
+      return res
+        .status(400)
+        .json({ message: "Erro ao buscar commits do GitHub" });
+    }
+
+    const githubCommits = await githubResponse.json();
+
+    // 6️⃣ Mapear commits
+    const commits = githubCommits.map((c) => ({
+      id: c.sha,
+      message: c.commit.message,
+      url: c.html_url,
+      data_commit: c.commit.author.date,
+    }));
+
+    console.log("Commits encontrados:", commits.length);
+
+    // 7️⃣ Retornar observação + commits
+    res.status(200).json({
+      observacao: tarefa.comentario || "",
+      commits,
+    });
+  } catch (err) {
+    console.error("Erro interno ao buscar informações da tarefa:", err);
+    res.status(500).json({ message: "Erro interno ao buscar informações." });
+  }
+};

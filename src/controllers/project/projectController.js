@@ -226,3 +226,38 @@ exports.getProjectUsers = async (req, res) => {
       .json({ message: "Erro interno ao buscar usuários do projeto." });
   }
 };
+
+exports.listCommitsByTarefa = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Buscar projeto_id e github_repo do projeto vinculado à tarefa
+    const result = await pool.query(
+      `SELECT p.github_repo 
+       FROM tarefa t
+       JOIN projeto p ON t.projeto_id = p.projeto_id
+       WHERE t.tarefa_id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Tarefa ou projeto não encontrado" });
+    }
+
+    const { github_repo } = result.rows[0];
+
+    if (!github_repo) {
+      return res.json([]); // Nenhum repositório vinculado
+    }
+
+    // Buscar últimos 30 commits do GitHub
+    const commits = await getCommitsByRepo(github_repo);
+
+    console.log(commits);
+
+    res.json(commits);
+  } catch (error) {
+    console.error("Erro ao listar commits:", error);
+    res.status(500).json({ message: "Erro interno" });
+  }
+};
