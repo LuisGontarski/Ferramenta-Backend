@@ -1,10 +1,10 @@
 const { insertSprint } = require("../../model/sprintModel");
 const { getSprintsByProject } = require("../../model/sprintModel");
+const { deleteSprintById } = require("../../model/sprintModel");
 
 exports.createSprint = async (req, res) => {
   const { nome, projeto_id } = req.body;
 
-  // Validação básica
   if (!nome || !projeto_id) {
     return res.status(400).json({ message: "Campos obrigatórios faltando." });
   }
@@ -34,3 +34,21 @@ exports.getSprintsByProject = async (req, res) => {
   }
 };
 
+exports.deleteSprint = async (req, res) => {
+  const { sprint_id } = req.params;
+
+  if (!sprint_id) return res.status(400).json({ message: "ID da sprint não informado." });
+
+  try {
+    const result = await deleteSprintById(sprint_id);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Sprint não encontrada" });
+    }
+
+    res.status(200).json({ message: "Sprint deletada com sucesso" });
+  } catch (err) {
+    console.error("Erro ao deletar sprint:", err);
+    res.status(500).json({ message: "Erro interno ao deletar sprint." });
+  }
+};

@@ -48,7 +48,16 @@ async function getSprintsByProject(projeto_id) {
   }
 }
 
+async function deleteSprintById(sprintId) {
+  const result = await pool.query(
+    "DELETE FROM sprint WHERE sprint_id = $1 RETURNING *",
+    [sprintId]
+  );
+  return result;
+}
+
 module.exports = {
   insertSprint,
   getSprintsByProject,
+  deleteSprintById,
 };
