@@ -346,8 +346,12 @@ exports.getUserRepos = async (req, res) => {
 
     const repos = await response.json();
 
-    // Filtra apenas informações relevantes
-    const filteredRepos = repos.map((repo) => ({
+    // --- ALTERAÇÃO AQUI ---
+    // 1. Filtra para incluir apenas os repositórios do próprio usuário
+    const reposDoUsuario = repos.filter(repo => repo.owner.login === user.github);
+
+    // 2. Mapeia apenas as informações relevantes dos repositórios filtrados
+    const filteredRepos = reposDoUsuario.map((repo) => ({
       name: repo.name,
       html_url: repo.html_url,
       description: repo.description,
