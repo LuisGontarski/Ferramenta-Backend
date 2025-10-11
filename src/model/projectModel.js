@@ -188,6 +188,7 @@ async function getProjectById(projeto_id) {
       p.criador_id,
       u.nome_usuario AS gerente_projeto,  -- adiciona o nome do criador
       p.criado_em,
+      p.github_repo,
       p.atualizado_em,
       COUNT(DISTINCT ue.usuario_id) AS membros_envolvidos
     FROM projeto p
