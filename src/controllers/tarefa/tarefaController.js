@@ -1,9 +1,13 @@
 const tarefaModel = require("../../model/tarefaModel");
-const { getEmailUsuario } = require("../../model/tarefaModel"); // pega o e-mail do usuário pelo ID
+const { getEmailUsuario } = require("../../model/tarefaModel");
 const { enviarEmail } = require("../../email/email");
 const { insertTarefa } = require("../../model/tarefaModel");
 const { listTarefasBySprint } = require("../../model/tarefaModel");
 const { updateFaseTarefa } = require("../../model/tarefaModel");
+const projetoModel = require("../../model/tarefaModel"); // ✅ corrigido
+const usuarioModel = require("../../model/tarefaModel"); // ✅ adicionado
+
+
 
 // Criar Tarefa
 exports.createTarefa = async (req, res) => {
