@@ -7,6 +7,7 @@ const { getProjectsByUser } = require("../../model/projectModel");
 const { getProjectById } = require("../../model/projectModel");
 const { deleteProjectById } = require("../../model/projectModel");
 const { fetchProjectUsers } = require("../../model/projectModel");
+const axios = require("axios");
 
 exports.getAllProjects = async (_req, res) => {
   try {
@@ -259,5 +260,46 @@ exports.listCommitsByTarefa = async (req, res) => {
   } catch (error) {
     console.error("Erro ao listar commits:", error);
     res.status(500).json({ message: "Erro interno" });
+  }
+};
+
+exports.getProjectCommits = async (req, res) => {
+  const { projeto_id } = req.params;
+
+  try {
+    // 1. Buscar o projeto para obter o nome do repositório e o token do criador
+    const projeto = await getProjectById(projeto_id);
+    if (!projeto || !projeto.github_repo) {
+      return res.status(404).json({ message: "Repositório não encontrado para este projeto." });
+    }
+
+    // Precisamos do token do criador para acessar repositórios privados
+    const criador = await require("../../model/loginModel").getUserById(projeto.criador_id);
+    if (!criador || !criador.github_token) {
+      return res.status(401).json({ message: "Token de autenticação do criador não encontrado." });
+    }
+
+    // 2. Chamar a API do GitHub
+    const response = await axios.get(
+      `https://api.github.com/repos/${projeto.github_repo}/commits`,
+      {
+        headers: {
+          Authorization: `token ${criador.github_token}`,
+        },
+      }
+    );
+
+    // 3. Formatar e enviar a resposta
+    const commits = response.data.map((commit) => ({
+      id: commit.sha,
+      message: commit.commit.message,
+      url: commit.html_url,
+      data_commit: commit.commit.author.date,
+    }));
+
+    res.json(commits);
+  } catch (error) {
+    console.error("Erro ao buscar commits do projeto:", error);
+    res.status(500).json({ message: "Erro interno ao buscar commits." });
   }
 };

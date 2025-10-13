@@ -13,5 +13,7 @@ router.get("/projects/:projeto_id/users", projectController.getProjectUsers);
 
 router.get("/tarefas/:id/commits", projectController.listCommitsByTarefa);
 
+router.get("/projects/:projeto_id/commits", projectController.getProjectCommits);
+
 
 module.exports = router;

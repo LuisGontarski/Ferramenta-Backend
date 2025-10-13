@@ -162,20 +162,22 @@ exports.updatePatchTarefa = async (req, res) => {
   }
 };
 
+
 exports.updateComentarioTarefa = async (req, res) => {
   const { id } = req.params;
-  const { comentario } = req.body;
+  const { comentario, commit_url } = req.body;
 
-  if (comentario === undefined) {
+  if (comentario === undefined && commit_url === undefined) {
     return res
       .status(400)
-      .json({ message: "O campo comentario é obrigatório." });
+      .json({ message: "Nenhum dado para atualizar foi fornecido." });
   }
 
   try {
-    const updatedTarefa = await tarefaModel.updateComentarioTarefa(
+    const updatedTarefa = await tarefaModel.updateComentarioECommit(
       id,
-      comentario
+      comentario,
+      commit_url
     );
     res.status(200).json(updatedTarefa);
   } catch (err) {
