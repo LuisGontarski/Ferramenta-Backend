@@ -109,17 +109,16 @@ exports.postAuthLogin = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    res.json({
+    return res.json({
       token: token,
       usuario_id: user.usuario_id,
       cargo: user.cargo,
       github_token: user.github_token,
+      usuario_nome: user.nome_usuario,
     });
-
-    // console.log("Usuário logado com sucesso:", user.id);
   } catch (error) {
     console.error("Erro no login:", error);
-    res.status(500).json({ message: "Erro interno do servidor" });
+    return res.status(500).json({ message: "Erro interno do servidor" });
   }
 };
 
@@ -348,7 +347,9 @@ exports.getUserRepos = async (req, res) => {
 
     // --- ALTERAÇÃO AQUI ---
     // 1. Filtra para incluir apenas os repositórios do próprio usuário
-    const reposDoUsuario = repos.filter(repo => repo.owner.login === user.github);
+    const reposDoUsuario = repos.filter(
+      (repo) => repo.owner.login === user.github
+    );
 
     // 2. Mapeia apenas as informações relevantes dos repositórios filtrados
     const filteredRepos = reposDoUsuario.map((repo) => ({
