@@ -1,3 +1,4 @@
+const pool = require('../../db/db');
 const { getAllProjects } = require("../../model/projectModel");
 const { createProject } = require("../../model/projectModel");
 const { validate: isUuid } = require("uuid");
@@ -303,3 +304,37 @@ exports.getProjectCommits = async (req, res) => {
     res.status(500).json({ message: "Erro interno ao buscar commits." });
   }
 };
+
+// GET /projects/:projeto_id/tasks/count?fase=Executar,Revisar
+exports.getProjectTaskCount = async (req, res) => {
+  const { projeto_id } = req.params;
+  const { fase } = req.query; // Ex: "Executar,Revisar"
+
+  if (!projeto_id) {
+    return res.status(400).json({ message: "ID do projeto é obrigatório." });
+  }
+
+  try {
+    let query = "SELECT COUNT(*) AS total FROM tarefa WHERE projeto_id = $1";
+    const params = [projeto_id];
+
+    if (fase) {
+      // Transformar string em array e adicionar placeholders
+      const fasesArray = String(fase).split(",").map(f => f.trim());
+      const placeholders = fasesArray.map((_, i) => `$${i + 2}`).join(",");
+      query += ` AND fase_tarefa IN (${placeholders})`;
+      params.push(...fasesArray);
+    }
+
+    const result = await pool.query(query, params);
+    const total = parseInt(result.rows[0].total, 10);
+
+    res.status(200).json({ total });
+  } catch (err) {
+    console.error("Erro ao buscar total de tarefas:", err);
+    res.status(500).json({ message: "Erro ao buscar total de tarefas" });
+  }
+};
+
+
+

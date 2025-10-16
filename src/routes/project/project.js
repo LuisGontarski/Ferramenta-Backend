@@ -11,6 +11,9 @@ router.get("/projects/user/:usuario_id", projectController.getProjectsByUser);
 
 router.get("/projects/:projeto_id/users", projectController.getProjectUsers);
 
+router.get("/projects/:projeto_id/tasks/count", projectController.getProjectTaskCount);
+
+
 router.get("/tarefas/:id/commits", projectController.listCommitsByTarefa);
 
 router.get("/projects/:projeto_id/commits", projectController.getProjectCommits);
