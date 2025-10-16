@@ -145,22 +145,21 @@ exports.getTarefasBySprint = async (req, res) => {
 
 exports.updatePatchTarefa = async (req, res) => {
   const { id } = req.params;
-  const { fase_tarefa } = req.body;
+  const { fase_tarefa, data_inicio_real, data_fim_real } = req.body;
 
   if (!fase_tarefa) {
-    return res
-      .status(400)
-      .json({ message: "O campo fase_tarefa é obrigatório." });
+    return res.status(400).json({ message: "O campo fase_tarefa é obrigatório." });
   }
 
   try {
-    const updatedTarefa = await updateFaseTarefa(id, fase_tarefa); // chama o model
+    const updatedTarefa = await updateFaseTarefa(id, fase_tarefa, data_inicio_real, data_fim_real);
     res.status(200).json(updatedTarefa);
   } catch (err) {
     console.error("Erro ao atualizar tarefa:", err);
     res.status(500).json({ message: "Erro interno ao atualizar a tarefa." });
   }
 };
+
 
 
 exports.updateComentarioTarefa = async (req, res) => {

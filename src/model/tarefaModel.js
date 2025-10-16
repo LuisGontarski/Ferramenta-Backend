@@ -95,21 +95,44 @@ async function listTarefasBySprint(sprint_id) {
   }
 }
 
-async function updateFaseTarefa(tarefa_id, fase_tarefa) {
+async function updateFaseTarefa(tarefa_id, fase_tarefa, data_inicio_real, data_fim_real) {
   try {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    // sempre atualiza fase_tarefa
+    fields.push(`fase_tarefa = $${idx++}`);
+    values.push(fase_tarefa);
+
+    if (data_inicio_real) {
+      fields.push(`data_inicio_real = $${idx++}`);
+      values.push(data_inicio_real);
+    }
+
+    if (data_fim_real) {
+      fields.push(`data_fim_real = $${idx++}`);
+      values.push(data_fim_real);
+    }
+
+    // último parâmetro é o ID da tarefa
+    values.push(tarefa_id);
+
     const query = `
       UPDATE tarefa
-      SET fase_tarefa = $1
-      WHERE tarefa_id = $2
+      SET ${fields.join(", ")}
+      WHERE tarefa_id = $${idx}
       RETURNING *;
     `;
-    const result = await pool.query(query, [fase_tarefa, tarefa_id]);
+
+    const result = await pool.query(query, values);
     return result.rows[0];
   } catch (err) {
     console.error("Erro ao atualizar fase da tarefa no model:", err);
     throw err;
   }
 }
+
 
 async function updateComentarioECommit(tarefa_id, comentario, commit_url) {
   try {
