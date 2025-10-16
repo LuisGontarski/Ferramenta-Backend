@@ -1,5 +1,3 @@
-const pool = require("../db"); // seu pool do PostgreSQL
-
 exports.uploadDocumentos = async (req, res) => {
   try {
     const projeto_id = req.params.projeto_id;

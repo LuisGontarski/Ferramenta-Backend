@@ -5,7 +5,7 @@ const {
   uploadDocumentos,
   listarDocumentos,
   deletarDocumento,
-} = require("../../controllers/documentoController");
+} = require("../../controllers/documento/documentoController");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"), // pasta onde os arquivos vão ficar
