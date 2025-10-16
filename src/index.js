@@ -12,10 +12,10 @@ const equipeRoutes = require("./routes/equipe/equipe");
 const tarefaRoutes = require("./routes/tarefa/tarefa");
 const commitRoutes = require("./routes/commit/commit");
 const relatorioRoutes = require("./routes/relatorio/relatorio");
-const chatRoutes = require("./routes/chat/chat"); // chat
+const chatRoutes = require("./routes/chat/chat");
 const sprintRoutes = require("./routes/sprint/sprint");
 
-// Model do chat para Socket.io
+// Model do chat
 const chatModel = require("./model/chatModel");
 
 const app = express();
@@ -50,18 +50,16 @@ io.on("connection", (socket) => {
     if (!projeto_id) return;
     socket.join(projeto_id);
 
-
     try {
       const mensagens = await chatModel.getMensagens(projeto_id);
-      // envia histórico apenas para o socket que entrou
-      socket.emit("messageHistory", mensagens);
+      socket.emit("messageHistory", mensagens); // histórico só para o usuário
     } catch (err) {
       console.error("Erro ao buscar histórico de mensagens:", err);
       socket.emit("error", { message: "Erro ao carregar histórico" });
     }
   });
 
-  // Receber mensagem e enviar para todos na sala
+  // Receber nova mensagem
   socket.on("sendMessage", async (data) => {
     try {
       const { usuario_id, projeto_id, texto, usuario_nome } = data;
@@ -74,7 +72,7 @@ io.on("connection", (socket) => {
         texto,
       });
 
-      // Emitir para todos na sala
+      // Emitir mensagem para todos na sala em tempo real
       io.to(projeto_id).emit("newMessage", {
         usuario_id,
         usuario_nome,
@@ -83,6 +81,7 @@ io.on("connection", (socket) => {
       });
     } catch (err) {
       console.error("Erro ao enviar mensagem via socket:", err);
+      socket.emit("error", { message: "Erro ao enviar mensagem" });
     }
   });
 
