@@ -28,6 +28,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/socket.io": "^3.0.1",
     "nodemon": "^3.1.10"
   }
 }

@@ -40,27 +40,32 @@ app.use("/api", sprintRoutes);
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-// Socket.io
+// ----------------------
+// Socket.io Chat
+// ----------------------
 io.on("connection", (socket) => {
-  // console.log("Novo usuário conectado")
 
-  // Entrar na sala do projeto
-  socket.on("joinProject", (projeto_id) => {
-    if (projeto_id) {
-      socket.join(projeto_id);
-      // console.log(`Usuário entrou na sala do projeto: ${projeto_id}`);
+  // Entrar na sala do projeto e enviar histórico
+  socket.on("joinProject", async (projeto_id) => {
+    if (!projeto_id) return;
+    socket.join(projeto_id);
+
+
+    try {
+      const mensagens = await chatModel.getMensagens(projeto_id);
+      // envia histórico apenas para o socket que entrou
+      socket.emit("messageHistory", mensagens);
+    } catch (err) {
+      console.error("Erro ao buscar histórico de mensagens:", err);
+      socket.emit("error", { message: "Erro ao carregar histórico" });
     }
   });
 
-  // Enviar mensagem
+  // Receber mensagem e enviar para todos na sala
   socket.on("sendMessage", async (data) => {
     try {
       const { usuario_id, projeto_id, texto, usuario_nome } = data;
-
-      if (!usuario_id || !projeto_id || !texto) {
-        // console.error("Dados inválidos enviados pelo frontend:", data);
-        return;
-      }
+      if (!usuario_id || !projeto_id || !texto) return;
 
       // Salvar mensagem no banco
       const mensagemSalva = await chatModel.enviarMensagem({
@@ -69,7 +74,7 @@ io.on("connection", (socket) => {
         texto,
       });
 
-      // Emitir a mensagem para todos na sala do projeto
+      // Emitir para todos na sala
       io.to(projeto_id).emit("newMessage", {
         usuario_id,
         usuario_nome,
@@ -77,17 +82,13 @@ io.on("connection", (socket) => {
         data_envio: mensagemSalva.criado_em,
       });
     } catch (err) {
-      // console.error("Erro ao enviar mensagem via socket:", err);
+      console.error("Erro ao enviar mensagem via socket:", err);
     }
   });
 
-  // Desconexão
-  socket.on("disconnect", () => {
-    // console.log("Usuário desconectado");
-  });
 });
 
 // Inicia o servidor
 server.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT} 🚀`);
 });
