@@ -130,15 +130,25 @@ async function deleteUser(id) {
   return result.rows[0]; // Retorna o ID do usuário deletado
 }
 
-async function getUsuariosComGithub() {
-  const query = `
+async function getUsuariosComGithub(search) {
+  let query = `
     SELECT usuario_id, nome_usuario, email, github
     FROM usuario
-    WHERE github IS NOT NULL AND github <> ''
   `;
-  const result = await pool.query(query);
+
+  const params = [];
+
+  // Se tiver termo de pesquisa, adiciona o filtro no WHERE
+  if (search) {
+    query += " WHERE nome_usuario ILIKE $1";
+    params.push(`%${search}%`);
+  }
+
+  const result = await pool.query(query, params);
   return result.rows;
 }
+
+module.exports = { getUsuariosComGithub };
 
 module.exports = {
   getUserByEmail,

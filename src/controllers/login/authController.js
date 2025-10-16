@@ -303,7 +303,8 @@ exports.deleteUser = async (req, res) => {
 
 exports.getUsuariosComGithub = async (req, res) => {
   try {
-    const usuarios = await getUsuariosComGithub();
+    const search = req.query.search || ""; // pega o termo da pesquisa
+    const usuarios = await getUsuariosComGithub(search);
     res.status(200).json(usuarios);
   } catch (error) {
     console.error("Erro ao buscar usuários:", error);
