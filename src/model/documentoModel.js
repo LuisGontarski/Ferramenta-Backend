@@ -1,63 +1,70 @@
-const pool = require("../db/db");
+const pool = require("../db/db"); // <-- A importação correta que estava faltando no controller
 
-exports.uploadDocumentos = async (req, res) => {
+async function insertDocumento(documento) {
+  const {
+    projeto_id,
+    nome_arquivo,
+    caminho_arquivo,
+    tipo_arquivo,
+    tamanho_arquivo,
+  } = documento;
+
+  const query = `
+    INSERT INTO documento (projeto_id, nome_arquivo, caminho_arquivo, tipo_arquivo, tamanho_arquivo, criado_em)
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING *;
+  `;
+
+  const values = [
+    projeto_id,
+    nome_arquivo,
+    caminho_arquivo,
+    tipo_arquivo,
+    tamanho_arquivo,
+  ];
+
   try {
-    const projeto_id = req.params.projeto_id;
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "Nenhum arquivo enviado" });
-    }
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error("Erro no model ao inserir documento:", error);
+    throw error;
+  }
+}
 
-    const documentos = req.files.map((file) => ({
-      projeto_id,
-      nome_arquivo: file.originalname,
-      caminho_arquivo: file.path,
-      tipo_arquivo: file.mimetype,
-      tamanho_arquivo: file.size,
-    }));
-
+async function getDocumentosByProjeto(projeto_id) {
     const query = `
-      INSERT INTO documento (projeto_id, nome_arquivo, caminho_arquivo, tipo_arquivo, tamanho_arquivo)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
+      SELECT *
+      FROM documento
+      WHERE projeto_id = $1 
+      ORDER BY criado_em DESC;
     `;
-
-    const resultados = [];
-    for (const doc of documentos) {
-      const result = await pool.query(query, [
-        doc.projeto_id,
-        doc.nome_arquivo,
-        doc.caminho_arquivo,
-        doc.tipo_arquivo,
-        doc.tamanho_arquivo,
-      ]);
-      resultados.push(result.rows[0]);
+    try {
+        const result = await pool.query(query, [projeto_id]);
+        return result.rows;
+    } catch (error) {
+        console.error("Erro no model ao buscar documentos:", error);
+        throw error;
     }
+}
 
-    res.status(200).json(resultados);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erro ao salvar documentos" });
-  }
-};
+async function deleteDocumentoById(documento_id) {
+    const query = `
+        DELETE FROM documento
+        WHERE documento_id = $1
+        RETURNING *;
+    `;
+    try {
+        const result = await pool.query(query, [documento_id]);
+        return result.rows[0]; // Retorna o documento deletado ou undefined se não encontrar
+    } catch (error) {
+        console.error("Erro no model ao deletar documento:", error);
+        throw error;
+    }
+}
 
-exports.listarDocumentos = async (req, res) => {
-  try {
-    const projeto_id = req.params.projeto_id;
-    const result = await pool.query("SELECT * FROM documento WHERE projeto_id=$1", [projeto_id]);
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erro ao listar documentos" });
-  }
-};
-
-exports.deletarDocumento = async (req, res) => {
-  try {
-    const documento_id = req.params.documento_id;
-    await pool.query("DELETE FROM documento WHERE documento_id=$1", [documento_id]);
-    res.status(200).json({ message: "Documento deletado" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erro ao deletar documento" });
-  }
+module.exports = {
+  insertDocumento,
+  getDocumentosByProjeto,
+  deleteDocumentoById,
 };

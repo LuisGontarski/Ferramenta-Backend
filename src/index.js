@@ -14,7 +14,8 @@ const commitRoutes = require("./routes/commit/commit");
 const relatorioRoutes = require("./routes/relatorio/relatorio");
 const chatRoutes = require("./routes/chat/chat");
 const sprintRoutes = require("./routes/sprint/sprint");
-const documentoRoutes = require("./routes/documento/documento");
+const documentoRoutes = require("./routes/documento/documento"); 
+const path = require('path');
 
 // Model do chat
 const chatModel = require("./model/chatModel");
@@ -26,6 +27,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Torna a pasta 'uploads' acessível publicamente para que os arquivos possam ser baixados
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 // Rotas
 app.use("/api", authRoutes);
 app.use("/api", githubApiRoutes);
@@ -36,7 +40,7 @@ app.use("/api", commitRoutes);
 app.use("/api", relatorioRoutes);
 app.use("/api", chatRoutes);
 app.use("/api", sprintRoutes);
-app.use("/api/documento", documentoRoutes);
+app.use("/api", documentoRoutes);
 
 // Criação do servidor HTTP para usar com Socket.io
 const server = http.createServer(app);
