@@ -13,6 +13,8 @@ router.get("/projects/:projeto_id/users", projectController.getProjectUsers);
 
 router.get("/projects/:projeto_id/tasks/count", projectController.getProjectTaskCount);
 
+router.get("/projects/:projeto_id/cycle-time", projectController.getProjectCycleTime);
+
 
 router.get("/tarefas/:id/commits", projectController.listCommitsByTarefa);
 

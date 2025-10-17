@@ -8,6 +8,7 @@ const { getProjectsByUser } = require("../../model/projectModel");
 const { getProjectById } = require("../../model/projectModel");
 const { deleteProjectById } = require("../../model/projectModel");
 const { fetchProjectUsers } = require("../../model/projectModel");
+const { getProjectCycleTime } = require("../../model/projectModel");
 const axios = require("axios");
 
 exports.getAllProjects = async (_req, res) => {
@@ -159,6 +160,23 @@ exports.getProjectsByUser = async (req, res) => {
     res.status(500).json({ message: "Erro interno ao buscar projetos." });
   }
 };
+exports.getProjectCycleTime = async (req, res) => {
+  const { projeto_id } = req.params;
+
+  if (!projeto_id) {
+    return res.status(400).json({ message: "ID do projeto é obrigatório." });
+  }
+
+  try {
+    const cycleTime = await getProjectCycleTime(projeto_id); // ✅ agora funciona
+    res.status(200).json({ cycleTime });
+  } catch (err) {
+    console.error("Erro ao obter cycle time:", err);
+    res.status(500).json({ message: "Erro ao obter cycle time do projeto." });
+  }
+};
+
+
 
 // PUT /projects
 exports.putUpdateProject = async (req, res) => {
@@ -319,7 +337,6 @@ exports.getProjectTaskCount = async (req, res) => {
     const params = [projeto_id];
 
     if (fase) {
-      // Transformar string em array e adicionar placeholders
       const fasesArray = String(fase).split(",").map(f => f.trim());
       const placeholders = fasesArray.map((_, i) => `$${i + 2}`).join(",");
       query += ` AND fase_tarefa IN (${placeholders})`;

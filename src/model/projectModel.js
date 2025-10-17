@@ -272,6 +272,35 @@ async function getCommitsByRepo(repoName) {
   }
 } 
 
+async function getProjectCycleTime(projeto_id) {
+  const query = `
+    SELECT 
+      AVG(EXTRACT(EPOCH FROM (data_fim_real - data_inicio_real))) / 86400 AS cycle_time
+    FROM tarefa
+    WHERE projeto_id = $1
+      AND fase_tarefa = 'Feito'
+      AND data_inicio_real IS NOT NULL
+      AND data_fim_real IS NOT NULL
+  `;
+  try {
+    const result = await pool.query(query, [projeto_id]);
+    let cycleTime = result.rows[0].cycle_time;
+
+    // Se for null ou undefined, retorna 0
+    if (!cycleTime) return 0;
+
+    // Converte para float antes de usar toFixed
+    cycleTime = parseFloat(cycleTime);
+
+    return parseFloat(cycleTime.toFixed(2));
+  } catch (err) {
+    console.error("Erro ao calcular cycle time:", err);
+    throw err;
+  }
+}
+
+
+
 
 module.exports = {
   getAllProjects,
@@ -283,4 +312,5 @@ module.exports = {
   getProjectById,
   fetchProjectUsers,
   getCommitsByRepo,
+  getProjectCycleTime,
 };
