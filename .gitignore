@@ -28,3 +28,9 @@ build/
 # Dependency directories
 .pnpm/
 .cache/
+
+# Ignora todo o conteúdo da pasta uploads
+uploads/*
+
+# Mas NÃO ignora o arquivo .gitkeep para manter a pasta no repositório
+!uploads/.gitkeep
