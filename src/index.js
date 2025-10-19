@@ -42,7 +42,7 @@ app.use("/api", relatorioRoutes);
 app.use("/api", chatRoutes);
 app.use("/api", sprintRoutes);
 app.use("/api", documentoRoutes);
-app.use("/api/requisito", requisitoRoutes);
+app.use("/api", requisitoRoutes);
 
 
 // Criação do servidor HTTP para usar com Socket.io

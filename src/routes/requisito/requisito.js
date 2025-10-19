@@ -3,9 +3,9 @@ const router = express.Router();
 const requisitoController = require("../../controllers/requisito/requisitoController");
 
 // Criar requisito
-router.post("/create", requisitoController.postRequisito);
+router.post("/requisito/create", requisitoController.postRequisito);
 
 // Listar requisitos de um projeto
-router.get("/list/:projeto_id", requisitoController.getRequisitosPorProjeto);
+router.get("/requisito/list/:projeto_id", requisitoController.getRequisitosPorProjeto);
 
 module.exports = router;
