@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const documentoController = require("../../controllers/documento/documentoController");
+const {
+  uploadDocumentos, // Nome correto da função importada
+  listarDocumentos,
+  deletarDocumento,
+} = require("../../controllers/documento/documentoController");
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => cb(null, "uploads/"), 
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + "-" + file.originalname);
@@ -12,9 +16,10 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Rotas corrigidas para usar as funções do controller importado
-router.post("/upload", upload.single('arquivo'), documentoController.uploadDocumento);
-router.get("/documentos/:projeto_id", documentoController.getDocumentos); // Rota para listar
-router.delete("/documentos/:documento_id", documentoController.deletarDocumento); // Rota para deletar
+// --- CORREÇÃO APLICADA AQUI ---
+router.post("/upload", upload.single('arquivo'), uploadDocumentos); 
+
+router.get("/list/:projeto_id", listarDocumentos);
+router.delete("/documentos/:documento_id", deletarDocumento);
 
 module.exports = router;

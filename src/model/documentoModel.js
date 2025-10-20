@@ -1,4 +1,4 @@
-const pool = require("../db/db"); // <-- A importação correta que estava faltando no controller
+const pool = require("../db/db"); // Certifique-se que o caminho para seu db.js está correto
 
 async function insertDocumento(documento) {
   const {
@@ -8,21 +8,12 @@ async function insertDocumento(documento) {
     tipo_arquivo,
     tamanho_arquivo,
   } = documento;
-
   const query = `
     INSERT INTO documento (projeto_id, nome_arquivo, caminho_arquivo, tipo_arquivo, tamanho_arquivo, criado_em)
     VALUES ($1, $2, $3, $4, $5, NOW())
     RETURNING *;
   `;
-
-  const values = [
-    projeto_id,
-    nome_arquivo,
-    caminho_arquivo,
-    tipo_arquivo,
-    tamanho_arquivo,
-  ];
-
+  const values = [projeto_id, nome_arquivo, caminho_arquivo, tipo_arquivo, tamanho_arquivo];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -48,6 +39,23 @@ async function getDocumentosByProjeto(projeto_id) {
     }
 }
 
+// Função para buscar um documento específico pelo ID
+async function getDocumentoById(documento_id) {
+    const query = `
+        SELECT *
+        FROM documento
+        WHERE documento_id = $1;
+    `;
+    try {
+        const result = await pool.query(query, [documento_id]);
+        return result.rows[0]; // Retorna o documento ou undefined se não encontrar
+    } catch (error) {
+        console.error("Erro no model ao buscar documento por ID:", error);
+        throw error;
+    }
+}
+
+// Função para deletar um documento pelo ID
 async function deleteDocumentoById(documento_id) {
     const query = `
         DELETE FROM documento
@@ -63,8 +71,11 @@ async function deleteDocumentoById(documento_id) {
     }
 }
 
+// --- EXPORTAÇÃO ÚNICA E CORRIGIDA ---
+// Garante que todas as funções necessárias estão sendo exportadas.
 module.exports = {
   insertDocumento,
   getDocumentosByProjeto,
-  deleteDocumentoById,
+  getDocumentoById,       // <-- Incluída aqui
+  deleteDocumentoById,    // <-- Incluída aqui
 };
