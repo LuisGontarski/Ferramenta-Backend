@@ -208,10 +208,6 @@ exports.getObservacaoTarefa = async (req, res) => {
 exports.getInformacoesTarefa = async (req, res) => {
   const { tarefa_id, projeto_id } = req.params;
 
-  console.log("=== DEBUG: Início do getInformacoesTarefa ===");
-  console.log("tarefa_id:", tarefa_id);
-  console.log("projeto_id:", projeto_id);
-
   try {
     // 1️⃣ Buscar observação da tarefa
     const tarefa = await tarefaModel.getObservacaoTarefa(tarefa_id);
@@ -219,7 +215,6 @@ exports.getInformacoesTarefa = async (req, res) => {
       console.error("Tarefa não encontrada");
       return res.status(404).json({ message: "Tarefa não encontrada." });
     }
-    console.log("Observação da tarefa encontrada:", tarefa.comentario);
 
     // 2️⃣ Buscar informações do projeto
     const projeto = await projetoModel.getProjetoById(projeto_id);
@@ -227,7 +222,6 @@ exports.getInformacoesTarefa = async (req, res) => {
       console.error("Projeto não encontrado");
       return res.status(400).json({ message: "Projeto não encontrado." });
     }
-    console.log("Projeto encontrado:", projeto);
 
     // 3️⃣ Verificar github_repo
     if (!projeto.github_repo) {
