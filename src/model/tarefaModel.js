@@ -4,18 +4,29 @@ const { v4: uuidv4 } = require("uuid");
 async function getTarefas() {
   const result = await pool.query(`SELECT * FROM tarefa`);
   return result.rows;
-};
+}
 
 async function getTarefaById(id) {
-  const result = await pool.query(`SELECT * FROM tarefa WHERE tarefa_id = $1`, [id]);
+  const result = await pool.query(`SELECT * FROM tarefa WHERE tarefa_id = $1`, [
+    id,
+  ]);
   return result.rows[0];
-};
+}
 
 async function updateTarefa(id, fields) {
   const {
-    titulo, descricao, responsavel_id, prioridade, tipo, 
-    data_inicio_prevista, data_termino_prevista, data_inicio_real, 
-    data_termino_real, projeto_id, nome, status,
+    titulo,
+    descricao,
+    responsavel_id,
+    prioridade,
+    tipo,
+    data_inicio_prevista,
+    data_termino_prevista,
+    data_inicio_real,
+    data_termino_real,
+    projeto_id,
+    nome,
+    status,
   } = fields;
 
   const result = await pool.query(
@@ -27,14 +38,24 @@ async function updateTarefa(id, fields) {
      WHERE tarefa_id = $13
      RETURNING *`,
     [
-      titulo, descricao, responsavel_id, prioridade, tipo, data_inicio_prevista,
-      data_termino_prevista, data_inicio_real, data_termino_real, projeto_id,
-      nome, status, id,
+      titulo,
+      descricao,
+      responsavel_id,
+      prioridade,
+      tipo,
+      data_inicio_prevista,
+      data_termino_prevista,
+      data_inicio_real,
+      data_termino_real,
+      projeto_id,
+      nome,
+      status,
+      id,
     ]
   );
 
   return result.rows[0];
-};
+}
 
 async function getEmailUsuario(usuario_id) {
   const result = await pool.query(
@@ -42,7 +63,7 @@ async function getEmailUsuario(usuario_id) {
     [usuario_id]
   );
   return result.rows[0]?.email;
-};
+}
 
 async function deleteTarefa(id) {
   const result = await pool.query(
@@ -50,25 +71,38 @@ async function deleteTarefa(id) {
     [id]
   );
   return result.rows[0];
-};
+}
 
 async function insertTarefa(tarefa) {
   const query = `
     INSERT INTO tarefa (
       titulo, descricao, status, prioridade, tipo, data_inicio, 
       data_entrega, projeto_id, responsavel_id, criador_id, 
-      story_points, fase_tarefa, sprint_id, comentario, commit_url
+      story_points, fase_tarefa, sprint_id, requisito_id, comentario, commit_url
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *;
   `;
+
   const values = [
-    tarefa.titulo, tarefa.descricao || null, tarefa.status,
-    tarefa.prioridade || null, tarefa.tipo || null, tarefa.data_inicio || null,
-    tarefa.data_entrega || null, tarefa.projeto_id, tarefa.responsavel_id || null,
-    tarefa.criador_id, tarefa.story_points || null, tarefa.fase_tarefa || null,
-    tarefa.sprint_id || null, tarefa.comentario || null, tarefa.commit_url || null
+    tarefa.titulo,
+    tarefa.descricao || null,
+    tarefa.status,
+    tarefa.prioridade || null,
+    tarefa.tipo || null,
+    tarefa.data_inicio || null,
+    tarefa.data_entrega || null,
+    tarefa.projeto_id,
+    tarefa.responsavel_id || null,
+    tarefa.criador_id,
+    tarefa.story_points || null,
+    tarefa.fase_tarefa || null,
+    tarefa.sprint_id || null,
+    tarefa.requisito_id || null, // novo campo
+    tarefa.comentario || null,
+    tarefa.commit_url || null,
   ];
+
   try {
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -95,7 +129,12 @@ async function listTarefasBySprint(sprint_id) {
   }
 }
 
-async function updateFaseTarefa(tarefa_id, fase_tarefa, data_inicio_real, data_fim_real) {
+async function updateFaseTarefa(
+  tarefa_id,
+  fase_tarefa,
+  data_inicio_real,
+  data_fim_real
+) {
   try {
     const fields = [];
     const values = [];
@@ -133,7 +172,6 @@ async function updateFaseTarefa(tarefa_id, fase_tarefa, data_inicio_real, data_f
   }
 }
 
-
 async function updateComentarioECommit(tarefa_id, comentario, commit_url) {
   try {
     const fields = [];
@@ -149,7 +187,10 @@ async function updateComentarioECommit(tarefa_id, comentario, commit_url) {
       values.push(commit_url);
     }
     if (fields.length === 0) {
-      const result = await pool.query('SELECT * FROM tarefa WHERE tarefa_id = $1', [tarefa_id]);
+      const result = await pool.query(
+        "SELECT * FROM tarefa WHERE tarefa_id = $1",
+        [tarefa_id]
+      );
       return result.rows[0];
     }
     values.push(tarefa_id);
@@ -160,7 +201,7 @@ async function updateComentarioECommit(tarefa_id, comentario, commit_url) {
       WHERE tarefa_id = $${queryIndex}
       RETURNING *;
     `;
-    
+
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (err) {
@@ -224,7 +265,7 @@ module.exports = {
   insertTarefa,
   listTarefasBySprint,
   updateFaseTarefa,
-  updateComentarioECommit, 
+  updateComentarioECommit,
   getObservacaoTarefa,
   getProjetoById,
   getUsuarioById,

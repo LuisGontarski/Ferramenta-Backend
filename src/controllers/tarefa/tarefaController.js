@@ -4,10 +4,8 @@ const { enviarEmail } = require("../../email/email");
 const { insertTarefa } = require("../../model/tarefaModel");
 const { listTarefasBySprint } = require("../../model/tarefaModel");
 const { updateFaseTarefa } = require("../../model/tarefaModel");
-const projetoModel = require("../../model/tarefaModel"); // ✅ corrigido
-const usuarioModel = require("../../model/tarefaModel"); // ✅ adicionado
-
-
+const projetoModel = require("../../model/tarefaModel");
+const usuarioModel = require("../../model/tarefaModel");
 
 // Criar Tarefa
 exports.createTarefa = async (req, res) => {
@@ -25,6 +23,7 @@ exports.createTarefa = async (req, res) => {
     story_points,
     fase_tarefa,
     sprint_id,
+    requisito_id,
   } = req.body;
 
   // Validação básica
@@ -47,6 +46,7 @@ exports.createTarefa = async (req, res) => {
       story_points,
       fase_tarefa,
       sprint_id,
+      requisito_id, // enviar para o model
     });
 
     res.status(201).json(novaTarefa);
@@ -148,19 +148,24 @@ exports.updatePatchTarefa = async (req, res) => {
   const { fase_tarefa, data_inicio_real, data_fim_real } = req.body;
 
   if (!fase_tarefa) {
-    return res.status(400).json({ message: "O campo fase_tarefa é obrigatório." });
+    return res
+      .status(400)
+      .json({ message: "O campo fase_tarefa é obrigatório." });
   }
 
   try {
-    const updatedTarefa = await updateFaseTarefa(id, fase_tarefa, data_inicio_real, data_fim_real);
+    const updatedTarefa = await updateFaseTarefa(
+      id,
+      fase_tarefa,
+      data_inicio_real,
+      data_fim_real
+    );
     res.status(200).json(updatedTarefa);
   } catch (err) {
     console.error("Erro ao atualizar tarefa:", err);
     res.status(500).json({ message: "Erro interno ao atualizar a tarefa." });
   }
 };
-
-
 
 exports.updateComentarioTarefa = async (req, res) => {
   const { id } = req.params;
