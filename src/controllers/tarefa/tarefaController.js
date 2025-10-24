@@ -279,6 +279,38 @@ exports.updatePatchTarefa = async (req, res) => {
       await updateStatusRequisitoPorTarefa(id, novoStatusRequisito);
     }
 
+    if (fase_tarefa === "Feito" && fase_anterior !== "Feito") {
+      (async () => {
+        try {
+          const projeto = await getProjectById(updatedTarefa.projeto_id);
+          if (!projeto || !projeto.criador_id) {
+            throw new Error(`Projeto (ID: ${updatedTarefa.projeto_id}) ou criador não encontrado.`);
+          }
+          const donoDoProjeto = await getUserById(projeto.criador_id);
+          if (!donoDoProjeto || !donoDoProjeto.email) {
+            throw new Error(`Email do dono do projeto (ID: ${projeto.criador_id}) não encontrado.`);
+          }
+
+          let nomeResponsavel = "Alguém";
+          if (updatedTarefa.responsavel_id) {
+            const responsavelTarefa = await getUserById(updatedTarefa.responsavel_id);
+            nomeResponsavel = responsavelTarefa ? (responsavelTarefa.nome_usuario || responsavelTarefa.nome || 'Usuário') : "Alguém";
+          }
+
+          const subject = `Tarefa Concluída: ${updatedTarefa.titulo}`;
+          const text = `Olá ${donoDoProjeto.nome_usuario || donoDoProjeto.nome},\n\n` +
+                       `A tarefa "${updatedTarefa.titulo}" foi movida para "Feito" no projeto "${projeto.nome}".\n\n` +
+                       `- Tarefa concluída por: ${nomeResponsavel}\n\n` +
+                       `Atenciosamente,\nEquipe da Plataforma`;
+
+          await sendEmail(donoDoProjeto.email, subject, text);
+          console.log(`E-mail de conclusão de tarefa enviado para ${donoDoProjeto.email}`);
+        } catch (emailError) {
+          console.error(`Falha ao enviar e-mail de conclusão:`, emailError);
+        }
+      })();
+    }
+
     res.status(200).json(updatedTarefa);
   } catch (err) {
     console.error("Erro ao atualizar tarefa:", err);
