@@ -129,15 +129,35 @@ async function listTarefasBySprint(sprint_id) {
   }
 }
 
-async function updateFaseTarefa(id, fase_tarefa) {
-  const query = `
-    UPDATE tarefa
-    SET fase_tarefa = $1
-    WHERE tarefa_id = $2
-    RETURNING *;
-  `;
-  const { rows } = await pool.query(query, [fase_tarefa, id]);
-  return rows[0];
+async function updateFaseTarefa(tarefa_id, fase_tarefa, data_inicio_real, data_fim_real) {
+  try {
+    const fields = ['fase_tarefa = $1'];
+    const values = [fase_tarefa];
+    let queryIndex = 2;
+
+    if (data_inicio_real) {
+      fields.push(`data_inicio_real = $${queryIndex++}`);
+      values.push(data_inicio_real);
+    }
+    if (data_fim_real) {
+      fields.push(`data_fim_real = $${queryIndex++}`);
+      values.push(data_fim_real);
+    }
+    values.push(tarefa_id); // Adiciona o ID no final
+
+    const query = `
+      UPDATE tarefa
+      SET ${fields.join(", ")}
+      WHERE tarefa_id = $${queryIndex}
+      RETURNING *;
+    `;
+    
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (err) {
+    console.error("Erro ao atualizar fase da tarefa no model:", err);
+    throw err;
+  }
 }
 
 async function updateStatusRequisitoPorTarefa(tarefa_id, novoStatus) {
