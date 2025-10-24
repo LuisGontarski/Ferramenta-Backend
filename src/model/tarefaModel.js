@@ -303,7 +303,8 @@ async function getHistoricoTarefasPorProjeto(projeto_id) {
       t.titulo as tarefa_titulo,
       t.sprint_id,
       s.nome as sprint_nome,
-      TO_CHAR(ht.criado_em, 'DD/MM/YYYY HH24:MI') as data_formatada
+      -- ✅ CORREÇÃO DO FUSO HORÁRIO:
+      TO_CHAR(ht.criado_em AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') as data_formatada
     FROM historico_tarefa ht
     INNER JOIN tarefa t ON ht.tarefa_id = t.tarefa_id
     LEFT JOIN usuario u ON ht.usuario_id = u.usuario_id
@@ -314,7 +315,9 @@ async function getHistoricoTarefasPorProjeto(projeto_id) {
 
   try {
     const result = await pool.query(query, [projeto_id]);
-    console.log(`📊 ${result.rows.length} históricos encontrados para projeto ${projeto_id}`);
+    console.log(
+      `📊 ${result.rows.length} históricos encontrados para projeto ${projeto_id}`
+    );
     return result.rows;
   } catch (error) {
     console.error("Erro ao buscar histórico de tarefas por projeto:", error);
