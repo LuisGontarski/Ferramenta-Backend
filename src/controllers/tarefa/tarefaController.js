@@ -11,6 +11,7 @@ const { getProjectById } = require("../../model/projectModel");
 const { sendEmail } = require("../../email/email");
 const { updateStatusRequisitoPorTarefa } = require("../../model/tarefaModel");
 const { registrarHistoricoTarefa } = require("../../model/tarefaModel");
+const { getTarefaById } = require("../../model/tarefaModel");
 
 const { atualizarStatusRequisito } = require("../../model/requisitoModel");
 // Criar Tarefa
@@ -221,7 +222,7 @@ exports.getTarefasBySprint = async (req, res) => {
 
 exports.updatePatchTarefa = async (req, res) => {
   const { id } = req.params;
-  const { fase_tarefa, data_inicio_real, data_fim_real } = req.body;
+  const { fase_tarefa, data_inicio_real, data_fim_real, usuario_id } = req.body;
 
   if (!fase_tarefa) {
     return res
@@ -229,18 +230,16 @@ exports.updatePatchTarefa = async (req, res) => {
       .json({ message: "O campo fase_tarefa é obrigatório." });
   }
 
-  // Determina o status do requisito de acordo com a fase da tarefa
-  let novoStatusRequisito;
-  if (fase_tarefa === "Backlog" || fase_tarefa === "Para Fazer") {
-    novoStatusRequisito = "Registrado";
-  } else if (fase_tarefa === "Executar" || fase_tarefa === "Revisar") {
-    novoStatusRequisito = "Em andamento";
-  } else if (fase_tarefa === "Feito") {
-    novoStatusRequisito = "Finalizado";
-  }
-
   try {
-    // Atualiza a tarefa
+    // 1. Buscar a tarefa atual para pegar a fase anterior
+    const tarefaAtual = await getTarefaById(id);
+    if (!tarefaAtual) {
+      return res.status(404).json({ message: "Tarefa não encontrada." });
+    }
+
+    const fase_anterior = tarefaAtual.fase_tarefa;
+
+    // 2. Atualizar a tarefa (código original)
     const updatedTarefa = await updateFaseTarefa(
       id,
       fase_tarefa,
@@ -248,14 +247,41 @@ exports.updatePatchTarefa = async (req, res) => {
       data_fim_real
     );
 
-    // Atualiza o requisito vinculado, se existir
+    // 3. ✅ NOVO: Registrar histórico apenas se a fase mudou
+    if (fase_anterior !== fase_tarefa) {
+      try {
+        await registrarHistoricoTarefa(
+          id,
+          "FASE_ALTERADA",
+          "fase_tarefa",
+          fase_anterior.toString(),
+          fase_tarefa.toString(),
+          usuario_id || tarefaAtual.criador_id,
+          `Fase alterada: ${fase_anterior} → ${fase_tarefa}`
+        );
+      } catch (histError) {
+        // ❌ ERRO NO HISTÓRICO NÃO AFETA A ATUALIZAÇÃO DA TAREFA
+        console.error("⚠️ Erro no histórico (ignorado):", histError.message);
+      }
+    }
+
+    // 4. Código original do requisito (se tiver)
+    let novoStatusRequisito;
+    if (fase_tarefa === "Backlog" || fase_tarefa === "Para Fazer") {
+      novoStatusRequisito = "Registrado";
+    } else if (fase_tarefa === "Executar" || fase_tarefa === "Revisar") {
+      novoStatusRequisito = "Em andamento";
+    } else if (fase_tarefa === "Feito") {
+      novoStatusRequisito = "Finalizado";
+    }
+
     if (updatedTarefa.requisito_id && novoStatusRequisito) {
       await updateStatusRequisitoPorTarefa(id, novoStatusRequisito);
     }
 
     res.status(200).json(updatedTarefa);
   } catch (err) {
-    console.error("Erro ao atualizar tarefa ou status do requisito:", err);
+    console.error("Erro ao atualizar tarefa:", err);
     res.status(500).json({ message: "Erro interno ao atualizar a tarefa." });
   }
 };
@@ -386,5 +412,36 @@ exports.getInformacoesTarefa = async (req, res) => {
   } catch (err) {
     console.error("Erro interno ao buscar informações da tarefa:", err);
     res.status(500).json({ message: "Erro interno ao buscar informações." });
+  }
+};
+
+// No tarefaController.js - adicione este endpoint
+exports.getHistoricoTarefasPorProjeto = async (req, res) => {
+  const { projeto_id } = req.params;
+
+  console.log("🔧 DEBUG: getHistoricoTarefasPorProjeto chamado");
+  console.log("🔧 DEBUG: projeto_id:", projeto_id);
+
+  if (!projeto_id) {
+    return res.status(400).json({ message: "projeto_id é obrigatório." });
+  }
+
+  try {
+    const historico = await tarefaModel.getHistoricoTarefasPorProjeto(projeto_id);
+    
+    console.log(`✅ DEBUG: ${historico.length} registros de histórico encontrados para o projeto`);
+    
+    res.status(200).json({ 
+      success: true,
+      projeto_id,
+      total: historico.length,
+      historico 
+    });
+  } catch (error) {
+    console.error("❌ Erro ao buscar histórico de tarefas do projeto:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Erro ao buscar histórico do projeto" 
+    });
   }
 };

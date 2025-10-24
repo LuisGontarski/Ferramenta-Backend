@@ -13,5 +13,8 @@ router.patch("/tarefas/:id", tarefaController.updatePatchTarefa);
 router.patch("/tarefas/:id/comentario", tarefaController.updateComentarioTarefa);
 router.get("/tarefas/:tarefa_id/:projeto_id/observacao", tarefaController.getInformacoesTarefa);
 
+// No seu arquivo de rotas de tarefas
+router.get("/tarefas/projeto/:projeto_id/historico", tarefaController.getHistoricoTarefasPorProjeto);
+
 
 module.exports = router;

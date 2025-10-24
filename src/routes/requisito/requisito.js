@@ -7,7 +7,7 @@ router.post("/requisito/create", requisitoController.postRequisito);
 
 // Listar requisitos de um projeto
 router.get("/requisito/list/:projeto_id", requisitoController.getRequisitosPorProjeto);
-
+router.get("/requisito/list2/:projeto_id", requisitoController.getRequisitosPorProjeto2);
 
 // Atualizar requisito
 router.put("/requisito/update/:requisito_id", requisitoController.updateRequisito);
