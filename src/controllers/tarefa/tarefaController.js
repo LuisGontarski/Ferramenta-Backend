@@ -6,9 +6,12 @@ const { listTarefasBySprint } = require("../../model/tarefaModel");
 const { updateFaseTarefa } = require("../../model/tarefaModel");
 const projetoModel = require("../../model/tarefaModel");
 const usuarioModel = require("../../model/tarefaModel");
-const { getUserById } = require("../../model/loginModel")
-const { getProjectById } = require("../../model/projectModel"); 
-const { sendEmail } = require("../../email/email"); 
+const { getUserById } = require("../../model/loginModel");
+const { getProjectById } = require("../../model/projectModel");
+const { sendEmail } = require("../../email/email");
+const { updateStatusRequisitoPorTarefa } = require("../../model/tarefaModel");
+
+const { atualizarStatusRequisito } = require("../../model/requisitoModel");
 // Criar Tarefa
 exports.createTarefa = async (req, res) => {
   const {
@@ -50,40 +53,61 @@ exports.createTarefa = async (req, res) => {
       sprint_id,
       requisito_id, // enviar para o model
     });
-    if (responsavel_id) { // Só envia se houver um responsável definido
+    if (responsavel_id) {
+      // Só envia se houver um responsável definido
       try {
         // Busca os dados necessários para o e-mail
         const [responsavel, criador, projeto] = await Promise.all([
           getUserById(responsavel_id),
           getUserById(criador_id),
-          getProjectById(projeto_id) 
+          getProjectById(projeto_id),
         ]);
 
         if (responsavel && responsavel.email && projeto && criador) {
-          const nomeResponsavel = responsavel.nome_usuario || responsavel.nome || 'Usuário';
-          const nomeCriador = criador.nome_usuario || criador.nome || 'Alguém';
-          const nomeProjeto = projeto.nome || 'um projeto';
-          
+          const nomeResponsavel =
+            responsavel.nome_usuario || responsavel.nome || "Usuário";
+          const nomeCriador = criador.nome_usuario || criador.nome || "Alguém";
+          const nomeProjeto = projeto.nome || "um projeto";
+
           const subject = `Nova Tarefa Atribuída: ${novaTarefa.titulo}`;
-          const text = `Olá ${nomeResponsavel},\n\n` +
-                       `Você foi atribuído(a) à tarefa "${novaTarefa.titulo}" no projeto "${nomeProjeto}" por ${nomeCriador}.\n\n` +
-                       `Detalhes:\n` +
-                       `- Prioridade: ${novaTarefa.prioridade || 'Não definida'}\n` +
-                       `- Tipo: ${novaTarefa.tipo || 'Não definido'}\n` +
-                       `- Data de Início: ${novaTarefa.data_inicio ? new Date(novaTarefa.data_inicio).toLocaleDateString() : 'Não definida'}\n\n` +
-                       `Acesse a plataforma para mais detalhes.\n\n` +
-                       `Atenciosamente,\nEquipe da Plataforma`;
+          const text =
+            `Olá ${nomeResponsavel},\n\n` +
+            `Você foi atribuído(a) à tarefa "${novaTarefa.titulo}" no projeto "${nomeProjeto}" por ${nomeCriador}.\n\n` +
+            `Detalhes:\n` +
+            `- Prioridade: ${novaTarefa.prioridade || "Não definida"}\n` +
+            `- Tipo: ${novaTarefa.tipo || "Não definido"}\n` +
+            `- Data de Início: ${
+              novaTarefa.data_inicio
+                ? new Date(novaTarefa.data_inicio).toLocaleDateString()
+                : "Não definida"
+            }\n\n` +
+            `Acesse a plataforma para mais detalhes.\n\n` +
+            `Atenciosamente,\nEquipe da Plataforma`;
 
           // Envia o e-mail (não bloqueia a resposta da API se falhar)
           sendEmail(responsavel.email, subject, text)
-            .then(() => console.log(`E-mail de notificação enviado para ${responsavel.email}`))
-            .catch(emailError => console.error(`Falha ao enviar e-mail de notificação para ${responsavel.email}:`, emailError));
+            .then(() =>
+              console.log(
+                `E-mail de notificação enviado para ${responsavel.email}`
+              )
+            )
+            .catch((emailError) =>
+              console.error(
+                `Falha ao enviar e-mail de notificação para ${responsavel.email}:`,
+                emailError
+              )
+            );
         } else {
-            console.warn(`Não foi possível enviar e-mail: dados incompletos (Responsável: ${!!responsavel}, Email: ${!!responsavel?.email}, Projeto: ${!!projeto}, Criador: ${!!criador})`);
+          console.warn(
+            `Não foi possível enviar e-mail: dados incompletos (Responsável: ${!!responsavel}, Email: ${!!responsavel?.email}, Projeto: ${!!projeto}, Criador: ${!!criador})`
+          );
         }
       } catch (emailRelatedError) {
         // Loga o erro, mas não impede a resposta principal
-        console.error("Erro ao buscar dados para notificação por e-mail:", emailRelatedError);
+        console.error(
+          "Erro ao buscar dados para notificação por e-mail:",
+          emailRelatedError
+        );
       }
     }
 
@@ -191,16 +215,33 @@ exports.updatePatchTarefa = async (req, res) => {
       .json({ message: "O campo fase_tarefa é obrigatório." });
   }
 
+  // Determina o status do requisito de acordo com a fase da tarefa
+  let novoStatusRequisito;
+  if (fase_tarefa === "Backlog" || fase_tarefa === "Para Fazer") {
+    novoStatusRequisito = "Registrado";
+  } else if (fase_tarefa === "Executar" || fase_tarefa === "Revisar") {
+    novoStatusRequisito = "Em andamento";
+  } else if (fase_tarefa === "Feito") {
+    novoStatusRequisito = "Finalizado";
+  }
+
   try {
+    // Atualiza a tarefa
     const updatedTarefa = await updateFaseTarefa(
       id,
       fase_tarefa,
       data_inicio_real,
       data_fim_real
     );
+
+    // Atualiza o requisito vinculado, se existir
+    if (updatedTarefa.requisito_id && novoStatusRequisito) {
+      await updateStatusRequisitoPorTarefa(id, novoStatusRequisito);
+    }
+
     res.status(200).json(updatedTarefa);
   } catch (err) {
-    console.error("Erro ao atualizar tarefa:", err);
+    console.error("Erro ao atualizar tarefa ou status do requisito:", err);
     res.status(500).json({ message: "Erro interno ao atualizar a tarefa." });
   }
 };

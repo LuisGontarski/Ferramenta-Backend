@@ -4,6 +4,8 @@ const {
   atualizarRequisito,
   deletarRequisito,
   atualizarStatusRequisito,
+  listarRequisitosPorProjeto2,
+  buscarHistoricoRequisito,
 } = require("../../model/requisitoModel");
 
 // Criar requisito
@@ -37,10 +39,12 @@ exports.postRequisito = async (req, res) => {
 exports.getRequisitosPorProjeto = async (req, res) => {
   try {
     const { projeto_id } = req.params;
+
     if (!projeto_id)
       return res.status(400).json({ message: "projeto_id é obrigatório." });
 
     const requisitos = await listarRequisitosPorProjeto(projeto_id);
+
     res.status(200).json({ requisitos });
   } catch (error) {
     console.error("Erro ao listar requisitos:", error);
@@ -103,24 +107,62 @@ exports.listarRequisitos = async (req, res) => {
 
 exports.atualizarStatusRequisito = async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, usuario_id } = req.body;
 
   if (!status) {
     return res.status(400).json({ message: "Status não informado" });
   }
 
   try {
-    const atualizado = await atualizarStatusRequisito(id, status);
+    const atualizado = await atualizarStatusRequisito(id, status, usuario_id);
 
     if (!atualizado) {
       return res.status(404).json({ message: "Requisito não encontrado" });
     }
 
-    res
-      .status(200)
-      .json({ message: "Status do requisito atualizado com sucesso" });
+    res.status(200).json({
+      message: "Status do requisito atualizado com sucesso",
+      requisito: atualizado,
+    });
   } catch (error) {
-    console.error("Erro ao atualizar status do requisito:", error);
+    console.error("❌ DEBUG: Erro ao atualizar status do requisito:", error);
     res.status(500).json({ message: "Erro ao atualizar status do requisito" });
+  }
+};
+
+// No requisitoController.js
+exports.getRequisitosPorProjeto2 = async (req, res) => {
+  try {
+    const { projeto_id } = req.params;
+
+    if (!projeto_id) {
+      return res.status(400).json({ message: "projeto_id é obrigatório." });
+    }
+
+    // Chamar a NOVA função do model
+    const requisitos = await listarRequisitosPorProjeto2(projeto_id);
+
+    res.status(200).json({ requisitos });
+  } catch (error) {
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+};
+
+// Controller
+exports.getHistoricoRequisito = async (req, res) => {
+  const { requisito_id } = req.params;
+
+  try {
+    const historico = await buscarHistoricoRequisito(requisito_id);
+    res.status(200).json({
+      success: true,
+      historico,
+    });
+  } catch (error) {
+    console.error("❌ Erro ao buscar histórico do requisito:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao buscar histórico",
+    });
   }
 };

@@ -8,6 +8,7 @@ router.post("/requisito/create", requisitoController.postRequisito);
 // Listar requisitos de um projeto
 router.get("/requisito/list/:projeto_id", requisitoController.getRequisitosPorProjeto);
 
+
 // Atualizar requisito
 router.put("/requisito/update/:requisito_id", requisitoController.updateRequisito);
 
@@ -16,6 +17,7 @@ router.delete("/requisito/delete/:requisito_id", requisitoController.deleteRequi
 
 router.get("/projeto/:projeto_id", requisitoController.listarRequisitos);
 
-router.patch("/:id/status", requisitoController.atualizarStatusRequisito);
+router.patch("/requisito/:id/status", requisitoController.atualizarStatusRequisito);
+router.get("/requisito/:requisito_id/historico", requisitoController.getHistoricoRequisito);
 
 module.exports = router;
