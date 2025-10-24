@@ -3,12 +3,17 @@ const { v4: uuidv4 } = require("uuid");
 
 async function insertSprint(sprint) {
   const query = `
-    INSERT INTO sprint (nome, projeto_id, story_points)
-    VALUES ($1, $2, $3)
+    INSERT INTO sprint (nome, projeto_id, story_points, dias_sprint)
+    VALUES ($1, $2, $3, $4)
     RETURNING *;
   `;
 
-  const values = [sprint.nome, sprint.projeto_id, sprint.story_points || null];
+  const values = [
+    sprint.nome,
+    sprint.projeto_id,
+    sprint.story_points || null,
+    sprint.dias_sprint || 0,
+  ];
 
   try {
     const result = await pool.query(query, values);
@@ -18,6 +23,7 @@ async function insertSprint(sprint) {
     throw error;
   }
 }
+
 
 
 async function getSprintsByProject(projeto_id) {
