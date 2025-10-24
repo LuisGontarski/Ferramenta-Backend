@@ -3,21 +3,22 @@ const { v4: uuidv4 } = require("uuid");
 
 async function insertSprint(sprint) {
   const query = `
-    INSERT INTO sprint (nome, projeto_id)
-    VALUES ($1, $2)
+    INSERT INTO sprint (nome, projeto_id, story_points)
+    VALUES ($1, $2, $3)
     RETURNING *;
   `;
 
-  const values = [sprint.nome, sprint.projeto_id];
+  const values = [sprint.nome, sprint.projeto_id, sprint.story_points || null];
 
   try {
-    const result = await pool.query(query, values); // igual ao userModel
+    const result = await pool.query(query, values);
     return result.rows[0];
   } catch (error) {
     console.error("Erro no model ao inserir sprint:", error);
     throw error;
   }
 }
+
 
 async function getSprintsByProject(projeto_id) {
   const query = `
