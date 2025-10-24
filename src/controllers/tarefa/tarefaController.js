@@ -10,6 +10,7 @@ const { getUserById } = require("../../model/loginModel");
 const { getProjectById } = require("../../model/projectModel");
 const { sendEmail } = require("../../email/email");
 const { updateStatusRequisitoPorTarefa } = require("../../model/tarefaModel");
+const { registrarHistoricoTarefa } = require("../../model/tarefaModel");
 
 const { atualizarStatusRequisito } = require("../../model/requisitoModel");
 // Criar Tarefa
@@ -37,6 +38,7 @@ exports.createTarefa = async (req, res) => {
   }
 
   try {
+    // ✅ 1. Criar tarefa (CÓDIGO ORIGINAL - mantido igual)
     const novaTarefa = await insertTarefa({
       titulo,
       descricao,
@@ -51,12 +53,28 @@ exports.createTarefa = async (req, res) => {
       story_points,
       fase_tarefa,
       sprint_id,
-      requisito_id, // enviar para o model
+      requisito_id,
     });
+
+    // ✅ 2. NOVO: Registrar histórico COM SEGURANÇA
+    try {
+      await registrarHistoricoTarefa(
+        novaTarefa.tarefa_id,
+        "CRIACAO",
+        null, // campo_alterado
+        null, // valor_anterior
+        null, // valor_novo
+        criador_id,
+        `Tarefa criada: "${titulo}" - Status: ${status}`
+      );
+    } catch (histError) {
+      // ❌ ERRO NO HISTÓRICO NÃO AFETA A CRIAÇÃO DA TAREFA
+      console.error("⚠️ Erro no histórico (ignorado):", histError.message);
+    }
+
+    // ✅ 3. Envio de email (CÓDIGO ORIGINAL - mantido igual)
     if (responsavel_id) {
-      // Só envia se houver um responsável definido
       try {
-        // Busca os dados necessários para o e-mail
         const [responsavel, criador, projeto] = await Promise.all([
           getUserById(responsavel_id),
           getUserById(criador_id),
@@ -84,7 +102,6 @@ exports.createTarefa = async (req, res) => {
             `Acesse a plataforma para mais detalhes.\n\n` +
             `Atenciosamente,\nEquipe da Plataforma`;
 
-          // Envia o e-mail (não bloqueia a resposta da API se falhar)
           sendEmail(responsavel.email, subject, text)
             .then(() =>
               console.log(
@@ -98,12 +115,9 @@ exports.createTarefa = async (req, res) => {
               )
             );
         } else {
-          console.warn(
-            `Não foi possível enviar e-mail: dados incompletos (Responsável: ${!!responsavel}, Email: ${!!responsavel?.email}, Projeto: ${!!projeto}, Criador: ${!!criador})`
-          );
+          console.warn(`Não foi possível enviar e-mail: dados incompletos`);
         }
       } catch (emailRelatedError) {
-        // Loga o erro, mas não impede a resposta principal
         console.error(
           "Erro ao buscar dados para notificação por e-mail:",
           emailRelatedError

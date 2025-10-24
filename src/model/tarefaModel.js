@@ -237,6 +237,55 @@ async function getUsuarioById(usuario_id) {
   }
 }
 
+async function registrarHistoricoTarefa(
+  tarefa_id,
+  tipo_alteracao,
+  campo_alterado = null,
+  valor_anterior = null,
+  valor_novo = null,
+  usuario_id = null,
+  observacao = null
+) {
+  // ✅ VALIDAÇÃO EXTRA: Garantir que temos um tarefa_id válido
+  if (!tarefa_id) {
+    console.error("❌ tarefa_id é obrigatório para histórico");
+    return null;
+  }
+
+  const query = `
+    INSERT INTO historico_tarefa 
+    (tarefa_id, tipo_alteracao, campo_alterado, valor_anterior, valor_novo, usuario_id, observacao)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *;
+  `;
+
+  try {
+    console.log(`🔧 Tentando registrar histórico para tarefa: ${tarefa_id}`);
+
+    const result = await pool.query(query, [
+      tarefa_id,
+      tipo_alteracao,
+      campo_alterado,
+      valor_anterior,
+      valor_novo,
+      usuario_id,
+      observacao,
+    ]);
+
+    console.log(
+      `✅ Histórico registrado com SUCESSO para tarefa: ${tarefa_id}`
+    );
+    return result.rows[0];
+  } catch (error) {
+    // ✅ IMPORTANTE: Só loga o erro, NÃO joga para não quebrar o fluxo principal
+    console.error(
+      `❌ Erro ao registrar histórico (NÃO CRÍTICO) para tarefa ${tarefa_id}:`,
+      error.message
+    );
+    return null; // Retorna null em vez de throw error
+  }
+}
+
 // --- EXPORTAÇÃO ÚNICA E CORRIGIDA ---
 module.exports = {
   getTarefas,
@@ -252,4 +301,5 @@ module.exports = {
   getProjetoById,
   getUsuarioById,
   updateStatusRequisitoPorTarefa,
+  registrarHistoricoTarefa,
 };
