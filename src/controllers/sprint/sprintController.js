@@ -3,7 +3,8 @@ const { getSprintsByProject } = require("../../model/sprintModel");
 const { deleteSprintById } = require("../../model/sprintModel");
 
 exports.createSprint = async (req, res) => {
-  const { nome, projeto_id, story_points, dias_sprint } = req.body;
+  const { nome, projeto_id, story_points, dias_sprint, data_inicio, data_fim } = req.body;
+
 
   if (!nome || !projeto_id) {
     return res.status(400).json({ message: "Campos obrigatórios faltando." });
@@ -15,7 +16,10 @@ exports.createSprint = async (req, res) => {
       projeto_id,
       story_points,
       dias_sprint,
+      data_inicio,
+      data_fim,
     });
+
     res.status(201).json(novaSprint);
   } catch (error) {
     console.error("Erro ao criar sprint:", error);
