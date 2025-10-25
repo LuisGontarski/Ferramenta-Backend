@@ -3,16 +3,17 @@ const { v4: uuidv4 } = require("uuid");
 
 async function insertSprint(sprint) {
   const query = `
-    INSERT INTO sprint (nome, projeto_id, story_points, dias_sprint)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO sprint (nome, projeto_id, story_points, dias_sprint, data_inicio, data_fim)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *;
   `;
-
   const values = [
     sprint.nome,
     sprint.projeto_id,
     sprint.story_points || null,
     sprint.dias_sprint || 0,
+    sprint.data_inicio || null,
+    sprint.data_fim || null,
   ];
 
   try {
@@ -23,6 +24,7 @@ async function insertSprint(sprint) {
     throw error;
   }
 }
+
 
 
 
