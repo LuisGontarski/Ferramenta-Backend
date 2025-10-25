@@ -84,6 +84,18 @@ async function createUser({
   }
 }
 
+async function getUserByGithubUsername(githubUsername) {
+  const query = `SELECT usuario_id, nome_usuario FROM usuario WHERE github = $1`;
+  const values = [githubUsername];
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]; // Returns the user object { usuario_id, nome_usuario } or undefined
+  } catch (error) {
+    console.error("Erro ao buscar usuário pelo GitHub username:", error);
+    throw error; // Let the controller handle the error
+  }
+}
+
 async function updateUser({
   id,
   nome,
@@ -159,5 +171,7 @@ module.exports = {
   getAllUsers,
   updateGithubUsername,
   getGithubUsernameFromToken,
+  getUsuariosComGithub,
+  getUserByGithubUsername, // Adiciona a nova função às exportações
   getUsuariosComGithub,
 };

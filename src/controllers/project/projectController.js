@@ -10,6 +10,7 @@ const { deleteProjectById } = require("../../model/projectModel");
 const { fetchProjectUsers } = require("../../model/projectModel");
 const { getProjectCycleTime } = require("../../model/projectModel");
 const axios = require("axios");
+const { getUserById, getUserByGithubUsername } = require("../../model/loginModel");
 
 exports.getAllProjects = async (_req, res) => {
   try {
@@ -286,39 +287,50 @@ exports.getProjectCommits = async (req, res) => {
   const { projeto_id } = req.params;
 
   try {
-    // 1. Buscar o projeto para obter o nome do repositório e o token do criador
     const projeto = await getProjectById(projeto_id);
     if (!projeto || !projeto.github_repo) {
       return res.status(404).json({ message: "Repositório não encontrado para este projeto." });
     }
 
-    // Precisamos do token do criador para acessar repositórios privados
-    const criador = await require("../../model/loginModel").getUserById(projeto.criador_id);
+    const criador = await getUserById(projeto.criador_id);
     if (!criador || !criador.github_token) {
       return res.status(401).json({ message: "Token de autenticação do criador não encontrado." });
     }
 
-    // 2. Chamar a API do GitHub
     const response = await axios.get(
       `https://api.github.com/repos/${projeto.github_repo}/commits`,
       {
         headers: {
           Authorization: `token ${criador.github_token}`,
+          Accept: 'application/vnd.github.v3+json', // Adicionado Accept header
         },
       }
     );
 
-    // 3. Formatar e enviar a resposta
-    const commits = response.data.map((commit) => ({
-      id: commit.sha,
-      message: commit.commit.message,
-      url: commit.html_url,
-      data_commit: commit.commit.author.date,
+    // Mapear commits e buscar usuário da plataforma
+    const commitsComUsuarioPlataforma = await Promise.all(response.data.map(async (commit) => {
+      let usuarioPlataforma = null;
+      const githubLogin = commit.author?.login; // Get GitHub login from commit data
+
+      if (githubLogin) {
+        // Find user in your DB using the GitHub login
+        usuarioPlataforma = await getUserByGithubUsername(githubLogin); //
+      }
+
+      return {
+        id: commit.sha,
+        message: commit.commit.message,
+        url: commit.html_url,
+        data_commit: commit.commit.author.date,
+        // Use platform name if found, otherwise fall back to GitHub name
+        nome_autor_plataforma: usuarioPlataforma?.nome_usuario || commit.commit.author.name || "Desconhecido",
+        avatar_url: commit.author?.avatar_url || null // Keep GitHub avatar for display
+      };
     }));
 
-    res.json(commits);
+    res.json(commitsComUsuarioPlataforma); // Retorna a lista modificada
   } catch (error) {
-    console.error("Erro ao buscar commits do projeto:", error);
+    console.error("Erro ao buscar commits do projeto:", error.response?.data || error.message); // Log mais detalhado
     res.status(500).json({ message: "Erro interno ao buscar commits." });
   }
 };
