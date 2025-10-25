@@ -345,6 +345,48 @@ async function getHistoricoTarefasPorProjeto(projeto_id) {
   }
 }
 
+// tarefaModel.js
+
+async function getTarefasByProjeto(projeto_id) {
+  const query = `
+    SELECT 
+      t.tarefa_id,
+      t.titulo,
+      t.descricao,
+      t.status,
+      t.prioridade,
+      t.tipo,
+      t.data_inicio,
+      t.data_entrega,
+      t.story_points,
+      t.fase_tarefa,
+      t.data_criacao,  -- ✅ CORRIGIDO: era criado_em
+      t.projeto_id,
+      t.responsavel_id,
+      t.criador_id,
+      t.requisito_id,
+      t.sprint_id,
+      s.nome as sprint_nome,
+      u_resp.nome_usuario as responsavel_nome,
+      u_criador.nome_usuario as criador_nome
+    FROM tarefa t
+    LEFT JOIN sprint s ON t.sprint_id = s.sprint_id
+    LEFT JOIN usuario u_resp ON t.responsavel_id = u_resp.usuario_id
+    LEFT JOIN usuario u_criador ON t.criador_id = u_criador.usuario_id
+    WHERE t.projeto_id = $1
+    ORDER BY t.data_criacao DESC;  -- ✅ CORRIGIDO: era criado_em
+  `;
+
+  try {
+    const result = await pool.query(query, [projeto_id]);
+    console.log(`📊 ${result.rows.length} tarefas encontradas para projeto ${projeto_id}`);
+    return result.rows;
+  } catch (error) {
+    console.error("Erro ao buscar tarefas por projeto:", error);
+    throw error;
+  }
+}
+
 // --- EXPORTAÇÃO ÚNICA E CORRIGIDA ---
 module.exports = {
   getTarefas,
@@ -362,4 +404,5 @@ module.exports = {
   updateStatusRequisitoPorTarefa,
   registrarHistoricoTarefa,
   getHistoricoTarefasPorProjeto,
+  getTarefasByProjeto,
 };

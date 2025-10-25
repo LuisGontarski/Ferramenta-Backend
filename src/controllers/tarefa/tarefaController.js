@@ -477,3 +477,36 @@ exports.getHistoricoTarefasPorProjeto = async (req, res) => {
     });
   }
 };
+
+exports.getTarefasByProjeto = async (req, res) => {
+  const { projeto_id } = req.params;
+
+  console.log("🔧 DEBUG: getTarefasByProjeto chamado");
+  console.log("🔧 DEBUG: projeto_id:", projeto_id);
+
+  if (!projeto_id) {
+    return res.status(400).json({ 
+      success: false,
+      message: "projeto_id é obrigatório." 
+    });
+  }
+
+  try {
+    const tarefas = await tarefaModel.getTarefasByProjeto(projeto_id);
+    
+    console.log(`✅ DEBUG: ${tarefas.length} tarefas encontradas para o projeto`);
+    
+    res.status(200).json({ 
+      success: true,
+      projeto_id,
+      total: tarefas.length,
+      tarefas 
+    });
+  } catch (error) {
+    console.error("❌ Erro ao buscar tarefas do projeto:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Erro ao buscar tarefas do projeto" 
+    });
+  }
+};
