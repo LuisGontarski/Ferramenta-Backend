@@ -12,6 +12,7 @@ const { sendEmail } = require("../../email/email");
 const { updateStatusRequisitoPorTarefa } = require("../../model/tarefaModel");
 const { registrarHistoricoTarefa } = require("../../model/tarefaModel");
 const { getTarefaById } = require("../../model/tarefaModel");
+const pool = require("../../db/db");
 
 const { atualizarStatusRequisito } = require("../../model/requisitoModel");
 // Criar Tarefa
@@ -57,23 +58,21 @@ exports.createTarefa = async (req, res) => {
       requisito_id,
     });
 
-    // ✅ 2. NOVO: Registrar histórico COM SEGURANÇA
+    // ✅ 2. Registrar histórico da tarefa
     try {
       await registrarHistoricoTarefa(
         novaTarefa.tarefa_id,
         "CRIACAO",
-        null, // campo_alterado
-        null, // valor_anterior
-        null, // valor_novo
+        null,
+        null,
+        null,
         criador_id,
         `Tarefa criada: "${titulo}" - Status: ${status}`
       );
     } catch (histError) {
-      // ❌ ERRO NO HISTÓRICO NÃO AFETA A CRIAÇÃO DA TAREFA
       console.error("⚠️ Erro no histórico (ignorado):", histError.message);
     }
 
-    // ✅ 3. Envio de email (CÓDIGO ORIGINAL - mantido igual)
     if (responsavel_id) {
       try {
         const [responsavel, criador, projeto] = await Promise.all([
@@ -103,6 +102,34 @@ exports.createTarefa = async (req, res) => {
             `Acesse a plataforma para mais detalhes.\n\n` +
             `Atenciosamente,\nEquipe da Plataforma`;
 
+          // ✅ 3. NOVO: Registrar notificação no banco ANTES de enviar email
+          try {
+            const notificacaoQuery = `
+              INSERT INTO historico_notificacao 
+              (usuario_id, tarefa_id, tipo_notificacao, titulo, mensagem)
+              VALUES ($1, $2, $3, $4, $5)
+              RETURNING notificacao_id;
+            `;
+
+            await pool.query(notificacaoQuery, [
+              responsavel_id,
+              novaTarefa.tarefa_id,
+              "TAREFA_ATRIBUÍDA",
+              "Nova Tarefa Atribuída",
+              `Você foi atribuído à tarefa "${titulo}" no projeto "${nomeProjeto}" por ${nomeCriador}.`,
+            ]);
+
+            console.log(
+              `✅ Notificação registrada no banco para usuário: ${responsavel_id}`
+            );
+          } catch (notificacaoError) {
+            console.error(
+              "❌ Erro ao registrar notificação (ignorado):",
+              notificacaoError.message
+            );
+          }
+
+          // ✅ 4. Enviar email (código original mantido)
           sendEmail(responsavel.email, subject, text)
             .then(() =>
               console.log(
@@ -111,7 +138,7 @@ exports.createTarefa = async (req, res) => {
             )
             .catch((emailError) =>
               console.error(
-                `Falha ao enviar e-mail de notificação para ${responsavel.email}:`,
+                `Falha ao enviar e-mail para ${responsavel.email}:`,
                 emailError
               )
             );
@@ -120,7 +147,7 @@ exports.createTarefa = async (req, res) => {
         }
       } catch (emailRelatedError) {
         console.error(
-          "Erro ao buscar dados para notificação por e-mail:",
+          "Erro ao buscar dados para notificação:",
           emailRelatedError
         );
       }
@@ -284,27 +311,40 @@ exports.updatePatchTarefa = async (req, res) => {
         try {
           const projeto = await getProjectById(updatedTarefa.projeto_id);
           if (!projeto || !projeto.criador_id) {
-            throw new Error(`Projeto (ID: ${updatedTarefa.projeto_id}) ou criador não encontrado.`);
+            throw new Error(
+              `Projeto (ID: ${updatedTarefa.projeto_id}) ou criador não encontrado.`
+            );
           }
           const donoDoProjeto = await getUserById(projeto.criador_id);
           if (!donoDoProjeto || !donoDoProjeto.email) {
-            throw new Error(`Email do dono do projeto (ID: ${projeto.criador_id}) não encontrado.`);
+            throw new Error(
+              `Email do dono do projeto (ID: ${projeto.criador_id}) não encontrado.`
+            );
           }
 
           let nomeResponsavel = "Alguém";
           if (updatedTarefa.responsavel_id) {
-            const responsavelTarefa = await getUserById(updatedTarefa.responsavel_id);
-            nomeResponsavel = responsavelTarefa ? (responsavelTarefa.nome_usuario || responsavelTarefa.nome || 'Usuário') : "Alguém";
+            const responsavelTarefa = await getUserById(
+              updatedTarefa.responsavel_id
+            );
+            nomeResponsavel = responsavelTarefa
+              ? responsavelTarefa.nome_usuario ||
+                responsavelTarefa.nome ||
+                "Usuário"
+              : "Alguém";
           }
 
           const subject = `Tarefa Concluída: ${updatedTarefa.titulo}`;
-          const text = `Olá ${donoDoProjeto.nome_usuario || donoDoProjeto.nome},\n\n` +
-                       `A tarefa "${updatedTarefa.titulo}" foi movida para "Feito" no projeto "${projeto.nome}".\n\n` +
-                       `- Tarefa concluída por: ${nomeResponsavel}\n\n` +
-                       `Atenciosamente,\nEquipe da Plataforma`;
+          const text =
+            `Olá ${donoDoProjeto.nome_usuario || donoDoProjeto.nome},\n\n` +
+            `A tarefa "${updatedTarefa.titulo}" foi movida para "Feito" no projeto "${projeto.nome}".\n\n` +
+            `- Tarefa concluída por: ${nomeResponsavel}\n\n` +
+            `Atenciosamente,\nEquipe da Plataforma`;
 
           await sendEmail(donoDoProjeto.email, subject, text);
-          console.log(`E-mail de conclusão de tarefa enviado para ${donoDoProjeto.email}`);
+          console.log(
+            `E-mail de conclusão de tarefa enviado para ${donoDoProjeto.email}`
+          );
         } catch (emailError) {
           console.error(`Falha ao enviar e-mail de conclusão:`, emailError);
         }
@@ -459,21 +499,25 @@ exports.getHistoricoTarefasPorProjeto = async (req, res) => {
   }
 
   try {
-    const historico = await tarefaModel.getHistoricoTarefasPorProjeto(projeto_id);
-    
-    console.log(`✅ DEBUG: ${historico.length} registros de histórico encontrados para o projeto`);
-    
-    res.status(200).json({ 
+    const historico = await tarefaModel.getHistoricoTarefasPorProjeto(
+      projeto_id
+    );
+
+    console.log(
+      `✅ DEBUG: ${historico.length} registros de histórico encontrados para o projeto`
+    );
+
+    res.status(200).json({
       success: true,
       projeto_id,
       total: historico.length,
-      historico 
+      historico,
     });
   } catch (error) {
     console.error("❌ Erro ao buscar histórico de tarefas do projeto:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Erro ao buscar histórico do projeto" 
+      message: "Erro ao buscar histórico do projeto",
     });
   }
 };
@@ -485,28 +529,30 @@ exports.getTarefasByProjeto = async (req, res) => {
   console.log("🔧 DEBUG: projeto_id:", projeto_id);
 
   if (!projeto_id) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "projeto_id é obrigatório." 
+      message: "projeto_id é obrigatório.",
     });
   }
 
   try {
     const tarefas = await tarefaModel.getTarefasByProjeto(projeto_id);
-    
-    console.log(`✅ DEBUG: ${tarefas.length} tarefas encontradas para o projeto`);
-    
-    res.status(200).json({ 
+
+    console.log(
+      `✅ DEBUG: ${tarefas.length} tarefas encontradas para o projeto`
+    );
+
+    res.status(200).json({
       success: true,
       projeto_id,
       total: tarefas.length,
-      tarefas 
+      tarefas,
     });
   } catch (error) {
     console.error("❌ Erro ao buscar tarefas do projeto:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Erro ao buscar tarefas do projeto" 
+      message: "Erro ao buscar tarefas do projeto",
     });
   }
 };

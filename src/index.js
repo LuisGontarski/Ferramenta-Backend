@@ -16,6 +16,7 @@ const chatRoutes = require("./routes/chat/chat");
 const sprintRoutes = require("./routes/sprint/sprint");
 const documentoRoutes = require("./routes/documento/documento"); 
 const requisitoRoutes = require("./routes/requisito/requisito");
+const notificacaoRoutes = require("./routes/notificacao/notificacao");
 const path = require('path');
 
 // Model do chat
@@ -43,6 +44,7 @@ app.use("/api", chatRoutes);
 app.use("/api", sprintRoutes);
 app.use("/api", documentoRoutes);
 app.use("/api", requisitoRoutes);
+app.use("/api", notificacaoRoutes);
 
 
 // Criação do servidor HTTP para usar com Socket.io
