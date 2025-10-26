@@ -147,31 +147,52 @@ async function updateProject(
 }
 
 async function getProjectsByUser(usuario_id) {
+  // Query modificada para incluir contagem de tarefas
   const query = `
     SELECT DISTINCT
       p.*,
-      COALESCE((
-        SELECT COUNT(DISTINCT ue.usuario_id)
-        FROM projeto_equipe pe
-        LEFT JOIN usuario_equipe ue ON pe.equipe_id = ue.equipe_id
-        WHERE pe.projeto_id = p.projeto_id
-          AND ue.usuario_id != p.criador_id
-      ), 0) + 1 AS total_membros -- +1 para incluir o criador
+      COALESCE(uc.total_membros, 1) AS total_membros, -- Usa subquery para contagem correta de membros
+      COALESCE(tc.total_tarefas, 0) AS total_tarefas, -- Subquery para total de tarefas
+      COALESCE(tcc.tarefas_concluidas, 0) AS tarefas_concluidas -- Subquery para tarefas concluídas
     FROM projeto p
-    LEFT JOIN projeto_equipe pe ON p.projeto_id = pe.projeto_id
-    LEFT JOIN usuario_equipe ue ON pe.equipe_id = ue.equipe_id
-    WHERE p.criador_id = $1
-       OR ue.usuario_id = $1
+    -- Junta com usuários do projeto para filtrar
+    LEFT JOIN usuario_projeto up ON p.projeto_id = up.projeto_id
+    -- Subquery para contar membros (exceto criador, que é contado depois se necessário)
+    LEFT JOIN (
+        SELECT projeto_id, COUNT(DISTINCT usuario_id) AS total_membros
+        FROM usuario_projeto
+        GROUP BY projeto_id
+    ) uc ON p.projeto_id = uc.projeto_id
+    -- Subquery para contar o total de tarefas do projeto
+    LEFT JOIN (
+        SELECT projeto_id, COUNT(tarefa_id) AS total_tarefas
+        FROM tarefa
+        GROUP BY projeto_id
+    ) tc ON p.projeto_id = tc.projeto_id
+    -- Subquery para contar tarefas concluídas ('Feito')
+    LEFT JOIN (
+        SELECT projeto_id, COUNT(tarefa_id) AS tarefas_concluidas
+        FROM tarefa
+        WHERE fase_tarefa = 'Feito' -- ou o status que indica conclusão
+        GROUP BY projeto_id
+    ) tcc ON p.projeto_id = tcc.projeto_id
+    WHERE up.usuario_id = $1 -- Filtra projetos onde o usuário é membro
     ORDER BY p.criado_em DESC;
   `;
   const values = [usuario_id];
 
   try {
     const result = await pool.query(query, values);
-    // console.log("Resultado da query getProjectsByUser:", result.rows);
-    return result.rows;
+    // Calcula a porcentagem aqui ou no frontend
+    return result.rows.map(projeto => ({
+        ...projeto,
+        // Calcula a porcentagem de progresso
+        progresso: projeto.total_tarefas > 0
+            ? Math.round((projeto.tarefas_concluidas / projeto.total_tarefas) * 100)
+            : 0 // Evita divisão por zero
+    }));
   } catch (error) {
-    console.error("Erro no model ao buscar projetos do usuário:", error);
+    console.error("Erro no model ao buscar projetos do usuário com progresso:", error);
     throw error;
   }
 }
