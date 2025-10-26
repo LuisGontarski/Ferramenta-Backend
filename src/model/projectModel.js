@@ -277,7 +277,7 @@ async function getProjectCycleTime(projeto_id) {
     SELECT 
       AVG(EXTRACT(EPOCH FROM (data_fim_real - data_inicio_real))) / 86400 AS cycle_time
     FROM tarefa
-    WHERE projeto_id = $1
+    WHERE sprint_id = $1
       AND fase_tarefa = 'Feito'
       AND data_inicio_real IS NOT NULL
       AND data_fim_real IS NOT NULL

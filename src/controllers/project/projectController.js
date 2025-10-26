@@ -345,7 +345,7 @@ exports.getProjectTaskCount = async (req, res) => {
   }
 
   try {
-    let query = "SELECT COUNT(*) AS total FROM tarefa WHERE projeto_id = $1";
+    let query = "SELECT COUNT(*) AS total FROM tarefa WHERE sprint_id = $1";
     const params = [projeto_id];
 
     if (fase) {
