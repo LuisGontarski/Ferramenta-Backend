@@ -184,15 +184,21 @@ async function getProjectsByUser(usuario_id) {
   try {
     const result = await pool.query(query, values);
     // Calcula a porcentagem aqui ou no frontend
-    return result.rows.map(projeto => ({
-        ...projeto,
-        // Calcula a porcentagem de progresso
-        progresso: projeto.total_tarefas > 0
-            ? Math.round((projeto.tarefas_concluidas / projeto.total_tarefas) * 100)
-            : 0 // Evita divisão por zero
+    return result.rows.map((projeto) => ({
+      ...projeto,
+      // Calcula a porcentagem de progresso
+      progresso:
+        projeto.total_tarefas > 0
+          ? Math.round(
+              (projeto.tarefas_concluidas / projeto.total_tarefas) * 100
+            )
+          : 0, // Evita divisão por zero
     }));
   } catch (error) {
-    console.error("Erro no model ao buscar projetos do usuário com progresso:", error);
+    console.error(
+      "Erro no model ao buscar projetos do usuário com progresso:",
+      error
+    );
     throw error;
   }
 }
@@ -291,9 +297,11 @@ async function getCommitsByRepo(repoName) {
     console.error("Erro ao buscar commits do GitHub:", error.message);
     return [];
   }
-} 
+}
 
 async function getProjectCycleTime(projeto_id) {
+  console.log("Calculando cycle time para o projeto:", projeto_id);
+
   const query = `
     SELECT 
       AVG(EXTRACT(EPOCH FROM (data_fim_real - data_inicio_real))) / 86400 AS cycle_time
@@ -319,9 +327,6 @@ async function getProjectCycleTime(projeto_id) {
     throw err;
   }
 }
-
-
-
 
 module.exports = {
   getAllProjects,

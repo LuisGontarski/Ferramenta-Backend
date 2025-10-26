@@ -1,4 +1,4 @@
-const pool = require('../../db/db');
+const pool = require("../../db/db");
 const { getAllProjects } = require("../../model/projectModel");
 const { createProject } = require("../../model/projectModel");
 const { validate: isUuid } = require("uuid");
@@ -10,7 +10,10 @@ const { deleteProjectById } = require("../../model/projectModel");
 const { fetchProjectUsers } = require("../../model/projectModel");
 const { getProjectCycleTime } = require("../../model/projectModel");
 const axios = require("axios");
-const { getUserById, getUserByGithubUsername } = require("../../model/loginModel");
+const {
+  getUserById,
+  getUserByGithubUsername,
+} = require("../../model/loginModel");
 
 exports.getAllProjects = async (_req, res) => {
   try {
@@ -161,6 +164,7 @@ exports.getProjectsByUser = async (req, res) => {
     res.status(500).json({ message: "Erro interno ao buscar projetos." });
   }
 };
+
 exports.getProjectCycleTime = async (req, res) => {
   const { projeto_id } = req.params;
 
@@ -176,8 +180,6 @@ exports.getProjectCycleTime = async (req, res) => {
     res.status(500).json({ message: "Erro ao obter cycle time do projeto." });
   }
 };
-
-
 
 // PUT /projects
 exports.putUpdateProject = async (req, res) => {
@@ -262,7 +264,9 @@ exports.listCommitsByTarefa = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Tarefa ou projeto não encontrado" });
+      return res
+        .status(404)
+        .json({ message: "Tarefa ou projeto não encontrado" });
     }
 
     const { github_repo } = result.rows[0];
@@ -289,12 +293,16 @@ exports.getProjectCommits = async (req, res) => {
   try {
     const projeto = await getProjectById(projeto_id);
     if (!projeto || !projeto.github_repo) {
-      return res.status(404).json({ message: "Repositório não encontrado para este projeto." });
+      return res
+        .status(404)
+        .json({ message: "Repositório não encontrado para este projeto." });
     }
 
     const criador = await getUserById(projeto.criador_id);
     if (!criador || !criador.github_token) {
-      return res.status(401).json({ message: "Token de autenticação do criador não encontrado." });
+      return res
+        .status(401)
+        .json({ message: "Token de autenticação do criador não encontrado." });
     }
 
     const response = await axios.get(
@@ -302,35 +310,43 @@ exports.getProjectCommits = async (req, res) => {
       {
         headers: {
           Authorization: `token ${criador.github_token}`,
-          Accept: 'application/vnd.github.v3+json', // Adicionado Accept header
+          Accept: "application/vnd.github.v3+json", // Adicionado Accept header
         },
       }
     );
 
     // Mapear commits e buscar usuário da plataforma
-    const commitsComUsuarioPlataforma = await Promise.all(response.data.map(async (commit) => {
-      let usuarioPlataforma = null;
-      const githubLogin = commit.author?.login; // Get GitHub login from commit data
+    const commitsComUsuarioPlataforma = await Promise.all(
+      response.data.map(async (commit) => {
+        let usuarioPlataforma = null;
+        const githubLogin = commit.author?.login; // Get GitHub login from commit data
 
-      if (githubLogin) {
-        // Find user in your DB using the GitHub login
-        usuarioPlataforma = await getUserByGithubUsername(githubLogin); //
-      }
+        if (githubLogin) {
+          // Find user in your DB using the GitHub login
+          usuarioPlataforma = await getUserByGithubUsername(githubLogin); //
+        }
 
-      return {
-        id: commit.sha,
-        message: commit.commit.message,
-        url: commit.html_url,
-        data_commit: commit.commit.author.date,
-        // Use platform name if found, otherwise fall back to GitHub name
-        nome_autor_plataforma: usuarioPlataforma?.nome_usuario || commit.commit.author.name || "Desconhecido",
-        avatar_url: commit.author?.avatar_url || null // Keep GitHub avatar for display
-      };
-    }));
+        return {
+          id: commit.sha,
+          message: commit.commit.message,
+          url: commit.html_url,
+          data_commit: commit.commit.author.date,
+          // Use platform name if found, otherwise fall back to GitHub name
+          nome_autor_plataforma:
+            usuarioPlataforma?.nome_usuario ||
+            commit.commit.author.name ||
+            "Desconhecido",
+          avatar_url: commit.author?.avatar_url || null, // Keep GitHub avatar for display
+        };
+      })
+    );
 
     res.json(commitsComUsuarioPlataforma); // Retorna a lista modificada
   } catch (error) {
-    console.error("Erro ao buscar commits do projeto:", error.response?.data || error.message); // Log mais detalhado
+    console.error(
+      "Erro ao buscar commits do projeto:",
+      error.response?.data || error.message
+    ); // Log mais detalhado
     res.status(500).json({ message: "Erro interno ao buscar commits." });
   }
 };
@@ -338,9 +354,9 @@ exports.getProjectCommits = async (req, res) => {
 // GET /projects/:projeto_id/tasks/count?fase=Executar,Revisar
 exports.getProjectTaskCount = async (req, res) => {
   const { projeto_id } = req.params;
-  const { fase } = req.query; // Ex: "Executar,Revisar"
+  const { fase } = req.query;
 
-  if (!projeto_id) {
+  if (!projeto_id || projeto_id === "null" || projeto_id === "undefined") {
     return res.status(400).json({ message: "ID do projeto é obrigatório." });
   }
 
@@ -348,9 +364,19 @@ exports.getProjectTaskCount = async (req, res) => {
     let query = "SELECT COUNT(*) AS total FROM tarefa WHERE sprint_id = $1";
     const params = [projeto_id];
 
+    // Se projeto_id for a string "null", busca por NULL
+    if (projeto_id === "null") {
+      query = "SELECT COUNT(*) AS total FROM tarefa WHERE sprint_id IS NULL";
+      params.length = 0; // Remove o parâmetro
+    }
+
     if (fase) {
-      const fasesArray = String(fase).split(",").map(f => f.trim());
-      const placeholders = fasesArray.map((_, i) => `$${i + 2}`).join(",");
+      const fasesArray = String(fase)
+        .split(",")
+        .map((f) => f.trim());
+      const placeholders = fasesArray
+        .map((_, i) => `$${params.length + i + 1}`)
+        .join(",");
       query += ` AND fase_tarefa IN (${placeholders})`;
       params.push(...fasesArray);
     }
@@ -364,6 +390,3 @@ exports.getProjectTaskCount = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar total de tarefas" });
   }
 };
-
-
-
