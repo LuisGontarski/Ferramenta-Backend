@@ -238,35 +238,23 @@ exports.putUpdateUser = async (req, res) => {
     return res.status(400).json({ message: "ID é obrigatório." });
   }
 
-  const userDTO = new UserDTO({ usuario_id: id, ...req.body });
+  // Apenas permite nome e email
+  const { nome_usuario, email } = req.body;
 
-  if (!userDTO.isValid()) {
-    return res.status(400).json({ message: "Dados inválidos." });
+  // Validações básicas
+  if (!nome_usuario || nome_usuario.trim() === "") {
+    return res.status(400).json({ message: "Nome é obrigatório." });
   }
 
-  if (!userDTO.email.includes("@") || !userDTO.email.includes(".com")) {
+  if (!email || !email.includes("@") || !email.includes(".com")) {
     return res.status(400).json({ message: "Email inválido." });
-  }
-
-  if (userDTO.senha.length < 6) {
-    return res
-      .status(400)
-      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
-  }
-
-  if (userDTO.nome_usuario.trim() === "") {
-    return res.status(400).json({ message: "Nome inválido." });
   }
 
   try {
     const userUpdated = await updateUser({
-      id: userDTO.usuario_id,
-      nome: userDTO.nome_usuario,
-      email: userDTO.email,
-      senha: userDTO.senha,
-      cargo: userDTO.cargo,
-      github: userDTO.github,
-      foto_perfil: userDTO.foto_perfil,
+      id: id,
+      nome: nome_usuario,
+      email: email,
     });
 
     if (!userUpdated) {

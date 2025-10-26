@@ -96,37 +96,25 @@ async function getUserByGithubUsername(githubUsername) {
   }
 }
 
-async function updateUser({
-  id,
-  nome,
-  email,
-  senha,
-  cargo,
-  github,
-  foto_perfil,
-}) {
+async function updateUser({ id, nome, email }) {
   const query = `
     UPDATE usuario
     SET
-      nome_usuario = COALESCE($1, nome_usuario),
-      email = COALESCE($2, email),
-      senha = COALESCE($3, senha),        -- Deve ser o hash da senha se estiver sendo alterada
-      cargo = COALESCE($4, cargo),
-      github = COALESCE($5, github),
-      foto_perfil = COALESCE($6, foto_perfil)
-    WHERE usuario_id = $7
-    RETURNING usuario_id;
+      nome_usuario = $1,
+      email = $2
+    WHERE usuario_id = $3
+    RETURNING usuario_id, nome_usuario, email, cargo, github, foto_perfil;
   `;
-  const values = [nome, email, senha, cargo, github, foto_perfil, id];
+  const values = [nome, email, id];
   try {
     const result = await pool.query(query, values);
     if (result.rowCount === 0) {
       return null; // Usuário não encontrado para atualizar
     }
-    return result.rows[0]; // Retorna os dados do usuário atualizado (sem a senha)
+    return result.rows[0]; // Retorna os dados do usuário atualizado
   } catch (error) {
     console.error("Erro ao atualizar usuário no modelo:", error);
-    throw error; // Re-throw para ser tratado pelo controller
+    throw error;
   }
 }
 
