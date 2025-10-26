@@ -556,3 +556,36 @@ exports.getTarefasByProjeto = async (req, res) => {
     });
   }
 };
+
+// No controller (tarefaController.js)
+exports.getHistoricoTarefaPorId = async (req, res) => {
+  const { tarefa_id } = req.params;
+
+  console.log("🔧 DEBUG: getHistoricoTarefaPorId chamado");
+  console.log("🔧 DEBUG: tarefa_id:", tarefa_id);
+
+  if (!tarefa_id) {
+    return res.status(400).json({ message: "tarefa_id é obrigatório." });
+  }
+
+  try {
+    const historico = await tarefaModel.getHistoricoTarefaPorId(tarefa_id);
+
+    console.log(
+      `✅ DEBUG: ${historico.length} registros de histórico encontrados para a tarefa`
+    );
+
+    res.status(200).json({
+      success: true,
+      tarefa_id,
+      total: historico.length,
+      historico,
+    });
+  } catch (error) {
+    console.error("❌ Erro ao buscar histórico da tarefa:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao buscar histórico da tarefa",
+    });
+  }
+};

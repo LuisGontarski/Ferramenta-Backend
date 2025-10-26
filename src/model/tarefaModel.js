@@ -387,6 +387,45 @@ async function getTarefasByProjeto(projeto_id) {
   }
 }
 
+// No model (tarefaModel.js)
+async function getHistoricoTarefaPorId(tarefa_id) {
+  const query = `
+    SELECT 
+      ht.historico_id,
+      ht.tarefa_id,
+      ht.tipo_alteracao,
+      ht.campo_alterado,
+      ht.valor_anterior,
+      ht.valor_novo,
+      ht.observacao,
+      ht.criado_em,
+      ht.usuario_id,
+      u.nome_usuario as usuario_nome,
+      t.titulo as tarefa_titulo,
+      t.sprint_id,
+      s.nome as sprint_nome,
+      -- ✅ CORREÇÃO DO FUSO HORÁRIO:
+      TO_CHAR(ht.criado_em AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') as data_formatada
+    FROM historico_tarefa ht
+    INNER JOIN tarefa t ON ht.tarefa_id = t.tarefa_id
+    LEFT JOIN usuario u ON ht.usuario_id = u.usuario_id
+    LEFT JOIN sprint s ON t.sprint_id = s.sprint_id
+    WHERE ht.tarefa_id = $1
+    ORDER BY ht.criado_em DESC;
+  `;
+
+  try {
+    const result = await pool.query(query, [tarefa_id]);
+    console.log(
+      `📊 ${result.rows.length} históricos encontrados para tarefa ${tarefa_id}`
+    );
+    return result.rows;
+  } catch (error) {
+    console.error("Erro ao buscar histórico da tarefa por ID:", error);
+    throw error;
+  }
+}
+
 // --- EXPORTAÇÃO ÚNICA E CORRIGIDA ---
 module.exports = {
   getTarefas,
@@ -405,4 +444,5 @@ module.exports = {
   registrarHistoricoTarefa,
   getHistoricoTarefasPorProjeto,
   getTarefasByProjeto,
+  getHistoricoTarefaPorId,
 };

@@ -16,6 +16,9 @@ router.get("/tarefas/:tarefa_id/:projeto_id/observacao", tarefaController.getInf
 // No seu arquivo de rotas de tarefas
 router.get("/tarefas/projeto/:projeto_id/historico", tarefaController.getHistoricoTarefasPorProjeto);
 
+// No seu arquivo de rotas (routes/tarefaRoutes.js ou similar)
+router.get("/tarefas/:tarefa_id/historico", tarefaController.getHistoricoTarefaPorId);
+
 router.get('/tarefas/projeto/:projeto_id', tarefaController.getTarefasByProjeto);
 
 
