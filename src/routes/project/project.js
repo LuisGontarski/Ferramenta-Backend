@@ -42,6 +42,67 @@ router.get(
   projectController.getProjectCycleTime
 );
 
+// GET /projects/:projeto_id/sprint/:sprint_id/metrics
+router.get("/projects/:projeto_id/sprint/:sprint_id/metrics", async (req, res) => {
+  const { projeto_id, sprint_id } = req.params;
+
+  if (!projeto_id || !sprint_id) {
+    return res.status(400).json({ message: "projeto_id e sprint_id são obrigatórios." });
+  }
+
+  try {
+    // 1️⃣ Buscar tarefas da sprint
+    const query = `
+      SELECT 
+        tarefa_id,
+        titulo,
+        story_points,
+        tipo,
+        data_criacao,
+        data_fim_real
+      FROM tarefa
+      WHERE sprint_id = $1 AND projeto_id = $2
+    `;
+    const result = await db.query(query, [sprint_id, projeto_id]);
+    const tarefas = result.rows;
+
+    if (tarefas.length === 0) {
+      return res.status(404).json({ message: "Nenhuma tarefa encontrada para esta sprint." });
+    }
+
+    // 2️⃣ Lead Time médio
+    const leadTimes = tarefas
+      .filter(t => t.data_fim_real) // só tarefas finalizadas
+      .map(t => (new Date(t.data_fim_real) - new Date(t.data_criacao)) / (1000 * 60 * 60 * 24)); // em dias
+    const leadTimeMedio = leadTimes.length > 0
+      ? leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length
+      : 0;
+
+    // 3️⃣ Velocidade da equipe (story points de tarefas finalizadas)
+    const velocidade = tarefas
+      .filter(t => t.data_fim_real && t.story_points)
+      .reduce((sum, t) => sum + t.story_points, 0);
+
+    // 4️⃣ Taxa de bugs (% de tarefas tipo 'bug')
+    const totalTarefas = tarefas.length;
+    const totalBugs = tarefas.filter(t => t.tipo === "bug").length;
+    const taxaBugs = totalTarefas > 0 ? (totalBugs / totalTarefas) * 100 : 0;
+
+    res.status(200).json({
+      totalTarefas,
+      totalBugs,
+      taxaBugsPercent: taxaBugs.toFixed(2),
+      leadTimeMedioDias: leadTimeMedio.toFixed(2),
+      velocidadeStoryPoints: velocidade
+    });
+
+  } catch (err) {
+    console.error("Erro ao calcular métricas da sprint:", err);
+    res.status(500).json({ message: "Erro interno ao calcular métricas da sprint." });
+  }
+});
+
+
 router.get("/tarefas/:id/commits", projectController.listCommitsByTarefa);
 
 router.get(
