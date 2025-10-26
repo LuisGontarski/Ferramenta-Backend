@@ -112,9 +112,10 @@ router.get('/sprint/:id/burndown', async (req, res) => {
         }
         // --- FIM DA LÓGICA CORRIGIDA ---
 
-        console.log("Dados do Burndown calculados (REVISADO):", burndownData);
-
-        res.json(burndownData);
+        res.json({
+            burndownData: burndownData, // Mantém os dados do gráfico
+            data_fim: sprint.data_fim // Adiciona a data de fim da sprint
+        });
     } catch (error) {
         console.error("Erro ao calcular burndown:", error);
         res.status(500).json({ message: "Erro ao calcular burndown." });
