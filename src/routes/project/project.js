@@ -12,10 +12,7 @@ router.get("/projects/user/:usuario_id", projectController.getProjectsByUser);
 
 router.get("/projects/:projeto_id/users", projectController.getProjectUsers);
 
-router.get(
-  "/projects/:projeto_id/tasks/count",
-  projectController.getProjectTaskCount
-);
+router.get("/projects/:projeto_id/tasks/count", projectController.getProjectTaskCount);
 
 router.patch("/projects/:projeto_id/sprint-selecionada", async (req, res) => {
   try {
