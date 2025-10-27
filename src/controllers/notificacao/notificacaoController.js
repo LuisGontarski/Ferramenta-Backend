@@ -36,7 +36,10 @@ exports.contarNaoLidas = async (req, res) => {
  */
 exports.getNotificacoes = async (req, res) => {
   try {
-    const { usuario_id } = req.query;
+    const { usuario_id, page = 0, limit = 20 } = req.query;
+
+    console.log("🔍 Backend - Buscando notificações para:", usuario_id);
+    console.log("🔍 Backend - Page:", page, "Limit:", limit);
 
     if (!usuario_id) {
       return res.status(400).json({
@@ -45,7 +48,6 @@ exports.getNotificacoes = async (req, res) => {
       });
     }
 
-    const { limit = 20, page = 0 } = req.query;
     const offset = page * limit;
 
     const notificacoes = await notificationModel.buscarNotificacoesUsuario(
@@ -58,6 +60,10 @@ exports.getNotificacoes = async (req, res) => {
       usuario_id
     );
 
+    console.log("📊 Backend - Notificações encontradas:", notificacoes.length);
+    console.log("📊 Backend - Total não lidas:", totalNaoLidas);
+    console.log("📊 Backend - Notificações:", notificacoes);
+
     res.json({
       success: true,
       notificacoes,
@@ -69,7 +75,7 @@ exports.getNotificacoes = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Erro ao buscar notificações:", error);
+    console.error("❌ Backend - Erro ao buscar notificações:", error);
     res.status(500).json({
       success: false,
       message: "Erro interno ao buscar notificações",

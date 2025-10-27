@@ -66,11 +66,35 @@ async function getEmailUsuario(usuario_id) {
 }
 
 async function deleteTarefa(id) {
-  const result = await pool.query(
-    `DELETE FROM tarefa WHERE tarefa_id = $1 RETURNING *`,
-    [id]
-  );
-  return result.rows[0];
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // 1. Primeiro exclui os registros dependentes
+    await client.query(
+      `DELETE FROM historico_notificacao WHERE tarefa_id = $1`,
+      [id]
+    );
+
+    await client.query(`DELETE FROM historico_tarefa WHERE tarefa_id = $1`, [
+      id,
+    ]);
+
+    // 2. Depois exclui a tarefa
+    const result = await client.query(
+      `DELETE FROM tarefa WHERE tarefa_id = $1 RETURNING *`,
+      [id]
+    );
+
+    await client.query("COMMIT");
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function insertTarefa(tarefa) {
@@ -129,9 +153,14 @@ async function listTarefasBySprint(sprint_id) {
   }
 }
 
-async function updateFaseTarefa(tarefa_id, fase_tarefa, data_inicio_real, data_fim_real) {
+async function updateFaseTarefa(
+  tarefa_id,
+  fase_tarefa,
+  data_inicio_real,
+  data_fim_real
+) {
   try {
-    const fields = ['fase_tarefa = $1'];
+    const fields = ["fase_tarefa = $1"];
     const values = [fase_tarefa];
     let queryIndex = 2;
 
@@ -151,7 +180,7 @@ async function updateFaseTarefa(tarefa_id, fase_tarefa, data_inicio_real, data_f
       WHERE tarefa_id = $${queryIndex}
       RETURNING *;
     `;
-    
+
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (err) {
@@ -379,7 +408,9 @@ async function getTarefasByProjeto(projeto_id) {
 
   try {
     const result = await pool.query(query, [projeto_id]);
-    console.log(`📊 ${result.rows.length} tarefas encontradas para projeto ${projeto_id}`);
+    console.log(
+      `📊 ${result.rows.length} tarefas encontradas para projeto ${projeto_id}`
+    );
     return result.rows;
   } catch (error) {
     console.error("Erro ao buscar tarefas por projeto:", error);

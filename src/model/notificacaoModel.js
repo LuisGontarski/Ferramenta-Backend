@@ -1,6 +1,5 @@
 const pool = require("../db/db");
 
-
 async function buscarNotificacoesUsuario(usuario_id, limit = 20, offset = 0) {
   if (!usuario_id) {
     throw new Error("usuário_id é obrigatório");
@@ -24,14 +23,22 @@ async function buscarNotificacoesUsuario(usuario_id, limit = 20, offset = 0) {
   `;
 
   try {
+    console.log("🔍 Model - Buscando notificações para:", usuario_id);
+    console.log("🔍 Model - Limit:", limit, "Offset:", offset);
+
     const result = await pool.query(query, [usuario_id, limit, offset]);
+
+    console.log(
+      "📊 Model - Notificações retornadas do banco:",
+      result.rows.length
+    );
+
     return result.rows;
   } catch (error) {
-    console.error("Erro ao buscar notificações:", error);
+    console.error("❌ Model - Erro ao buscar notificações:", error);
     throw error;
   }
 }
-
 
 async function contarNotificacoesNaoLidas(usuario_id) {
   if (!usuario_id) {
