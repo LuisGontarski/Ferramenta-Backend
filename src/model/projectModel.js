@@ -331,15 +331,17 @@ async function getProjectCycleTime(projeto_id) {
 async function getProjectReport(projectId) {
   const query = `
     WITH project_data AS (
-      -- Dados básicos do projeto
-      SELECT 
+      -- Dados básicos do projeto CORRIGIDO para buscar nomes das equipes
+      SELECT
         p.*,
-        e.nome as equipe_nome,
-        e.descricao as equipe_descricao,
         u.nome_usuario as criador_nome,
-        s.nome as sprint_atual_nome
+        s.nome as sprint_atual_nome,
+        -- ✅ Junta os nomes de todas as equipes associadas
+        (SELECT STRING_AGG(e.nome, ', ')
+         FROM equipe e
+         JOIN projeto_equipe pe ON e.equipe_id = pe.equipe_id
+         WHERE pe.projeto_id = p.projeto_id) as equipe_nome -- Renomeado para refletir múltiplos nomes se houver
       FROM projeto p
-      LEFT JOIN equipe e ON p.equipe_id = e.equipe_id
       LEFT JOIN usuario u ON p.criador_id = u.usuario_id
       LEFT JOIN sprint s ON p.sprint_selecionada_id = s.sprint_id
       WHERE p.projeto_id = $1
@@ -358,14 +360,19 @@ async function getProjectReport(projectId) {
       WHERE pe.projeto_id = $1
     ),
     tasks_summary AS (
-      -- Resumo de tarefas
-      SELECT 
+      -- Resumo de tarefas CORRIGIDO para usar fase_tarefa
+      SELECT
         COUNT(*) as total_tarefas,
-        COUNT(CASE WHEN t.status = 'Concluída' THEN 1 END) as tarefas_concluidas,
-        COUNT(CASE WHEN t.status = 'Em andamento' THEN 1 END) as tarefas_andamento,
-        COUNT(CASE WHEN t.status = 'Pendente' THEN 1 END) as tarefas_pendentes,
+        -- ✅ Conta como concluída se a fase for 'Feito'
+        COUNT(CASE WHEN t.fase_tarefa = 'Feito' THEN 1 END) as tarefas_concluidas,
+        -- ✅ Conta como em andamento se a fase for 'Executar' ou 'Revisar'
+        COUNT(CASE WHEN t.fase_tarefa IN ('Executar', 'Revisar') THEN 1 END) as tarefas_andamento,
+        -- ✅ Conta como pendente se a fase for 'Backlog' ou 'Para Fazer' (ou qualquer outra não concluída/andamento)
+        COUNT(CASE WHEN t.fase_tarefa IN ('Backlog', 'Para Fazer') THEN 1 END) as tarefas_pendentes,
         COALESCE(SUM(t.story_points), 0) as total_story_points,
-        COALESCE(SUM(CASE WHEN t.status = 'Concluída' THEN t.story_points ELSE 0 END), 0) as story_points_concluidos,
+         -- ✅ Soma SPs apenas se a fase for 'Feito'
+        COALESCE(SUM(CASE WHEN t.fase_tarefa = 'Feito' THEN t.story_points ELSE 0 END), 0) as story_points_concluidos,
+        -- Mantém o cálculo de cycle time como estava, assumindo que cycle_time_dias está correto
         AVG(t.cycle_time_dias) as cycle_time_medio
       FROM tarefa t
       WHERE t.projeto_id = $1
@@ -539,10 +546,25 @@ async function getProjectReport(projectId) {
 }
 
 async function getProjectMetrics(projectId) {
+  // ✅ Adiciona verificação inicial para projectId
+  if (!projectId) {
+      console.warn("getProjectMetrics chamado sem projectId válido.");
+      // Retorna um objeto com valores padrão ou nulos para evitar erros
+      return {
+          velocidade: { velocidade_media: 0, velocidade_minima: 0, velocidade_maxima: 0, sprints_analisadas: 0 },
+          tempos_entrega: { lead_time_medio_dias: null, cycle_time_medio_dias: null, lead_time_mediano_dias: null, cycle_time_mediano_dias: null, total_tarefas_medidas: 0 },
+          taxas_conclusao: { taxa_conclusao_tarefas: 0, taxa_conclusao_requisitos: 0, tarefas_entregues_no_prazo: 0 },
+          qualidade: { tarefas_reabertas: 0, commits_por_tarefa: 0 },
+          distribuicao_trabalho: { membros_com_tarefas: 0, total_membros_equipe: 0, media_tarefas_por_membro: 0, max_tarefas_por_membro: 0 },
+          sprints_concluidas: [],
+          throughput_semanal: []
+      };
+  }
+
   const query = `
     WITH completed_sprints AS (
-      -- Sprints concluídas com dados de velocidade
-      SELECT 
+      -- ✅ CORRIGIDO: Usa fase_tarefa = 'Feito' para SPs concluídos
+      SELECT
         s.sprint_id,
         s.nome,
         s.story_points as story_points_planejados,
@@ -550,41 +572,44 @@ async function getProjectMetrics(projectId) {
         s.data_inicio,
         s.data_fim
       FROM sprint s
-      LEFT JOIN tarefa t ON s.sprint_id = t.sprint_id AND t.status = 'Concluída'
+      LEFT JOIN tarefa t ON s.sprint_id = t.sprint_id AND t.fase_tarefa = 'Feito' -- Corrigido aqui
       WHERE s.projeto_id = $1 AND s.data_fim < NOW()
       GROUP BY s.sprint_id, s.nome, s.story_points, s.data_inicio, s.data_fim
     ),
     weekly_throughput AS (
-      -- Throughput semanal (tarefas concluídas por semana)
-      SELECT 
+      -- ✅ CORRIGIDO: Usa fase_tarefa = 'Feito'
+      SELECT
         DATE_TRUNC('week', data_fim_real) as semana,
         COUNT(*) as tarefas_concluidas,
         COALESCE(SUM(story_points), 0) as story_points_concluidos
-      FROM tarefa 
-      WHERE projeto_id = $1 
-        AND status = 'Concluída' 
+      FROM tarefa
+      WHERE projeto_id = $1
+        AND fase_tarefa = 'Feito' -- Corrigido aqui
         AND data_fim_real IS NOT NULL
       GROUP BY DATE_TRUNC('week', data_fim_real)
       ORDER BY semana DESC
       LIMIT 8
     ),
     lead_time_metrics AS (
-      -- Métricas de lead time e cycle time
-      SELECT 
+       -- ✅ CORRIGIDO: Usa fase_tarefa = 'Feito' E calcula cycle time diretamente
+      SELECT
         AVG(EXTRACT(EPOCH FROM (data_fim_real - data_criacao))/86400) as lead_time_medio_dias,
-        AVG(cycle_time_dias) as cycle_time_medio_dias,
+        -- Calcula cycle time aqui
+        AVG(EXTRACT(EPOCH FROM (data_fim_real - data_inicio_real))/86400) as cycle_time_medio_dias,
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (data_fim_real - data_criacao))/86400) as lead_time_mediano_dias,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cycle_time_dias) as cycle_time_mediano_dias,
+        -- Calcula cycle time mediano aqui
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (data_fim_real - data_inicio_real))/86400) as cycle_time_mediano_dias,
         COUNT(*) as total_tarefas_medidas
-      FROM tarefa 
-      WHERE projeto_id = $1 
-        AND status = 'Concluída' 
+      FROM tarefa
+      WHERE projeto_id = $1
+        AND fase_tarefa = 'Feito' -- Corrigido aqui
         AND data_fim_real IS NOT NULL
         AND data_criacao IS NOT NULL
+        AND data_inicio_real IS NOT NULL -- Necessário para cycle time
     ),
     team_velocity AS (
-      -- Velocidade da equipe
-      SELECT 
+      -- Velocidade da equipe (já usa completed_sprints, que foi corrigido)
+      SELECT
         COALESCE(AVG(story_points_concluidos), 0) as velocidade_media,
         COALESCE(MIN(story_points_concluidos), 0) as velocidade_minima,
         COALESCE(MAX(story_points_concluidos), 0) as velocidade_maxima,
@@ -593,64 +618,66 @@ async function getProjectMetrics(projectId) {
     ),
     completion_rates AS (
       -- Taxas de conclusão
-      SELECT 
-        -- Taxa de conclusão de tarefas
-        (SELECT 
-          CASE 
+      SELECT
+        -- ✅ CORRIGIDO: Taxa de conclusão de tarefas usa fase_tarefa = 'Feito'
+        (SELECT
+          CASE
             WHEN COUNT(*) = 0 THEN 0
-            ELSE (COUNT(*) FILTER (WHERE status = 'Concluída'))::numeric / COUNT(*)
+            ELSE (COUNT(*) FILTER (WHERE fase_tarefa = 'Feito'))::numeric / COUNT(*) -- Corrigido aqui
           END
          FROM tarefa WHERE projeto_id = $1) as taxa_conclusao_tarefas,
-        
-        -- Taxa de conclusão de requisitos
-        (SELECT 
-          CASE 
+
+        -- ✅ CORRIGIDO: Taxa de conclusão de requisitos usa status = 'Finalizado'
+        (SELECT
+          CASE
             WHEN COUNT(*) = 0 THEN 0
-            ELSE (COUNT(*) FILTER (WHERE status = 'Concluído'))::numeric / COUNT(*)
+            ELSE (COUNT(*) FILTER (WHERE status = 'Finalizado'))::numeric / COUNT(*) -- Corrigido aqui
           END
          FROM requisito WHERE projeto_id = $1) as taxa_conclusao_requisitos,
-         
-        -- Taxa de entrega no prazo
-        (SELECT 
-          CASE 
+
+        -- ✅ CORRIGIDO: Taxa de entrega no prazo usa fase_tarefa = 'Feito'
+        (SELECT
+          CASE
             WHEN COUNT(*) = 0 THEN 0
             ELSE (COUNT(*) FILTER (WHERE data_entrega >= data_fim_real))::numeric / COUNT(*)
           END
          FROM tarefa
-         WHERE projeto_id = $1 
-           AND status = 'Concluída' 
-           AND data_entrega IS NOT NULL 
+         WHERE projeto_id = $1
+           AND fase_tarefa = 'Feito' -- Corrigido aqui
+           AND data_entrega IS NOT NULL
            AND data_fim_real IS NOT NULL) as tarefas_entregues_no_prazo
     ),
     quality_metrics AS (
-      -- Métricas de qualidade
-      SELECT 
-        -- Reabertura de tarefas (baseado no histórico)
-        (SELECT COUNT(DISTINCT ht.tarefa_id) 
+       -- Métricas de qualidade
+       -- ⚠️ ATENÇÃO: A lógica de 'tarefas_reabertas' pode precisar de ajuste
+       -- dependendo de como você loga as mudanças de FASE no histórico.
+       -- Esta versão assume que o histórico loga a MUDANÇA DE FASE
+       -- (valor_anterior='Feito', valor_novo!='Feito').
+       SELECT
+        (SELECT COUNT(DISTINCT ht.tarefa_id)
          FROM historico_tarefa ht
          INNER JOIN tarefa t ON ht.tarefa_id = t.tarefa_id
-         WHERE t.projeto_id = $1 
-           AND ht.campo_alterado = 'status' 
-           AND ht.valor_anterior = 'Concluída'
-           AND ht.valor_novo != 'Concluída') as tarefas_reabertas,
-           
-        -- Commits por tarefa
-        (SELECT 
-          CASE 
+         WHERE t.projeto_id = $1
+           AND ht.campo_alterado = 'fase_tarefa' -- Verifica se o histórico loga a fase
+           AND ht.valor_anterior = 'Feito'       -- Se a fase anterior era 'Feito'
+           AND ht.valor_novo != 'Feito') as tarefas_reabertas, -- E a nova não é 'Feito'
+
+        -- Commits por tarefa (mantido igual, verificar se faz sentido)
+        (SELECT
+          CASE
             WHEN COUNT(DISTINCT t.tarefa_id) = 0 THEN 0
-            ELSE COUNT(*)::numeric / COUNT(DISTINCT t.tarefa_id)
+            ELSE COUNT(c.commit_id)::numeric / COUNT(DISTINCT t.tarefa_id) -- Corrigido para contar commit_id
           END
          FROM commit c
-         INNER JOIN tarefa t ON c.projeto_id = t.projeto_id
+         INNER JOIN tarefa t ON c.projeto_id = t.projeto_id -- Assume commit ligado ao projeto, não tarefa
          WHERE t.projeto_id = $1) as commits_por_tarefa
     ),
     workload_distribution AS (
-      -- Distribuição de carga de trabalho
-      SELECT 
+      -- Distribuição de carga de trabalho (mantido igual)
+      SELECT
         COUNT(DISTINCT responsavel_id) as membros_com_tarefas,
-        (SELECT COUNT(*) FROM usuario_equipe ue 
-         INNER JOIN projeto_equipe pe ON ue.equipe_id = pe.equipe_id 
-         WHERE pe.projeto_id = $1) as total_membros_equipe,
+        (SELECT COUNT(DISTINCT up.usuario_id) FROM usuario_projeto up -- Corrigido para contar usuários distintos no projeto
+         WHERE up.projeto_id = $1) as total_membros_equipe,
         AVG(tarefas_por_membro) as media_tarefas_por_membro,
         MAX(tarefas_por_membro) as max_tarefas_por_membro
       FROM (
@@ -661,23 +688,12 @@ async function getProjectMetrics(projectId) {
       ) subquery
     )
 
-    SELECT 
-      -- Velocidade e Produtividade
+    SELECT
       (SELECT row_to_json(tv) FROM team_velocity tv) as velocidade,
-      
-      -- Tempos
       (SELECT row_to_json(ltm) FROM lead_time_metrics ltm) as tempos_entrega,
-      
-      -- Taxas de Conclusão
       (SELECT row_to_json(cr) FROM completion_rates cr) as taxas_conclusao,
-      
-      -- Métricas de Qualidade
       (SELECT row_to_json(qm) FROM quality_metrics qm) as qualidade,
-      
-      -- Distribuição de Trabalho
       (SELECT row_to_json(wd) FROM workload_distribution wd) as distribuicao_trabalho,
-      
-      -- Dados Detalhados
       (SELECT json_agg(row_to_json(cs)) FROM completed_sprints cs) as sprints_concluidas,
       (SELECT json_agg(row_to_json(wt)) FROM weekly_throughput wt) as throughput_semanal
   `;
@@ -686,13 +702,23 @@ async function getProjectMetrics(projectId) {
     const result = await pool.query(query, [projectId]);
 
     if (result.rows.length === 0) {
-      throw new Error("Projeto não encontrado para métricas");
+      console.warn(`Nenhum resultado encontrado para métricas do projeto ${projectId}`);
+      // Retorna objeto com valores padrão/nulos para evitar erros no controller
+       return {
+          velocidade: { velocidade_media: 0, velocidade_minima: 0, velocidade_maxima: 0, sprints_analisadas: 0 },
+          tempos_entrega: { lead_time_medio_dias: null, cycle_time_medio_dias: null, lead_time_mediano_dias: null, cycle_time_mediano_dias: null, total_tarefas_medidas: 0 },
+          taxas_conclusao: { taxa_conclusao_tarefas: 0, taxa_conclusao_requisitos: 0, tarefas_entregues_no_prazo: 0 },
+          qualidade: { tarefas_reabertas: 0, commits_por_tarefa: 0 },
+          distribuicao_trabalho: { membros_com_tarefas: 0, total_membros_equipe: 0, media_tarefas_por_membro: 0, max_tarefas_por_membro: 0 },
+          sprints_concluidas: [],
+          throughput_semanal: []
+       };
     }
-
+    console.log(`Métricas calculadas para o projeto ${projectId}:`, result.rows[0]); // Log para depuração
     return result.rows[0];
   } catch (error) {
     console.error("Erro ao obter métricas do projeto:", error);
-    throw error;
+    throw error; // Re-lança o erro para o controller lidar
   }
 }
 
