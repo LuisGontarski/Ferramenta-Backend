@@ -9,6 +9,8 @@ const { getProjectById } = require("../../model/projectModel");
 const { deleteProjectById } = require("../../model/projectModel");
 const { fetchProjectUsers } = require("../../model/projectModel");
 const { getProjectCycleTime } = require("../../model/projectModel");
+const { getProjectReport } = require("../../model/projectModel");
+const { getProjectMetrics } = require("../../model/projectModel");
 const axios = require("axios");
 const {
   getUserById,
@@ -388,5 +390,51 @@ exports.getProjectTaskCount = async (req, res) => {
   } catch (err) {
     console.error("Erro ao buscar total de tarefas:", err);
     res.status(500).json({ message: "Erro ao buscar total de tarefas" });
+  }
+};
+
+exports.getProjectReport = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const projectReport = await getProjectReport(id);
+    res.status(200).json(projectReport);
+  } catch (error) {
+    console.error("Erro ao gerar relatório do projeto:", error);
+    res.status(500).json({ message: "Erro ao gerar relatório do projeto." });
+  }
+};
+
+exports.getProjectMetrics = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const projectMetrics = await getProjectMetrics(id);
+    res.status(200).json(projectMetrics);
+  } catch (error) {
+    console.error("Erro ao obter métricas do projeto:", error);
+    res.status(500).json({ message: "Erro ao obter métricas do projeto." });
+  }
+};
+
+// Opcional: Endpoint combinado com relatório e métricas
+exports.getProjectFullReport = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [projectReport, projectMetrics] = await Promise.all([
+      getProjectReport(id),
+      getProjectMetrics(id),
+    ]);
+
+    const fullReport = {
+      ...projectReport,
+      metricas_detalhadas: projectMetrics,
+    };
+
+    res.status(200).json(fullReport);
+  } catch (error) {
+    console.error("Erro ao gerar relatório completo do projeto:", error);
+    res
+      .status(500)
+      .json({ message: "Erro ao gerar relatório completo do projeto." });
   }
 };

@@ -328,6 +328,374 @@ async function getProjectCycleTime(projeto_id) {
   }
 }
 
+async function getProjectReport(projectId) {
+  const query = `
+    WITH project_data AS (
+      -- Dados básicos do projeto
+      SELECT 
+        p.*,
+        e.nome as equipe_nome,
+        e.descricao as equipe_descricao,
+        u.nome_usuario as criador_nome,
+        s.nome as sprint_atual_nome
+      FROM projeto p
+      LEFT JOIN equipe e ON p.equipe_id = e.equipe_id
+      LEFT JOIN usuario u ON p.criador_id = u.usuario_id
+      LEFT JOIN sprint s ON p.sprint_selecionada_id = s.sprint_id
+      WHERE p.projeto_id = $1
+    ),
+    team_members AS (
+      -- Membros da equipe do projeto
+      SELECT 
+        u.usuario_id,
+        u.nome_usuario,
+        u.email,
+        u.cargo,
+        u.github
+      FROM usuario u
+      INNER JOIN usuario_equipe ue ON u.usuario_id = ue.usuario_id
+      INNER JOIN projeto_equipe pe ON ue.equipe_id = pe.equipe_id
+      WHERE pe.projeto_id = $1
+    ),
+    tasks_summary AS (
+      -- Resumo de tarefas
+      SELECT 
+        COUNT(*) as total_tarefas,
+        COUNT(CASE WHEN t.status = 'Concluída' THEN 1 END) as tarefas_concluidas,
+        COUNT(CASE WHEN t.status = 'Em andamento' THEN 1 END) as tarefas_andamento,
+        COUNT(CASE WHEN t.status = 'Pendente' THEN 1 END) as tarefas_pendentes,
+        COALESCE(SUM(t.story_points), 0) as total_story_points,
+        COALESCE(SUM(CASE WHEN t.status = 'Concluída' THEN t.story_points ELSE 0 END), 0) as story_points_concluidos,
+        AVG(t.cycle_time_dias) as cycle_time_medio
+      FROM tarefa t
+      WHERE t.projeto_id = $1
+    ),
+    tasks_by_priority AS (
+      -- Tarefas por prioridade
+      SELECT 
+        t.prioridade,
+        COUNT(*) as quantidade,
+        COALESCE(SUM(t.story_points), 0) as story_points
+      FROM tarefa t
+      WHERE t.projeto_id = $1
+      GROUP BY t.prioridade
+    ),
+    tasks_by_status AS (
+      -- Tarefas por status
+      SELECT 
+        t.status,
+        COUNT(*) as quantidade
+      FROM tarefa t
+      WHERE t.projeto_id = $1
+      GROUP BY t.status
+    ),
+    requirements_summary AS (
+      -- Resumo de requisitos
+      SELECT 
+        COUNT(*) as total_requisitos,
+        COUNT(CASE WHEN r.status = 'Concluído' THEN 1 END) as requisitos_concluidos,
+        COUNT(CASE WHEN r.status = 'Em desenvolvimento' THEN 1 END) as requisitos_desenvolvimento,
+        COUNT(CASE WHEN r.status = 'Em análise' THEN 1 END) as requisitos_analise,
+        COUNT(CASE WHEN r.tipo = 'Funcional' THEN 1 END) as requisitos_funcionais,
+        COUNT(CASE WHEN r.tipo = 'Não Funcional' THEN 1 END) as requisitos_nao_funcionais
+      FROM requisito r
+      WHERE r.projeto_id = $1
+    ),
+    commits_summary AS (
+      -- Resumo de commits
+      SELECT 
+        COUNT(*) as total_commits,
+        MIN(c.data_commit) as primeiro_commit,
+        MAX(c.data_commit) as ultimo_commit,
+        COUNT(DISTINCT c.usuario_id) as contribuidores_unicos
+      FROM commit c
+      WHERE c.projeto_id = $1
+    ),
+    recent_commits AS (
+      -- Commits recentes (últimos 10)
+      SELECT 
+        c.commit_id,
+        c.hash_commit,
+        c.mensagem,
+        c.data_commit,
+        c.url_commit,
+        u.nome_usuario
+      FROM commit c
+      INNER JOIN usuario u ON c.usuario_id = u.usuario_id
+      WHERE c.projeto_id = $1
+      ORDER BY c.data_commit DESC
+      LIMIT 10
+    ),
+    documents_summary AS (
+      -- Documentos do projeto
+      SELECT 
+        COUNT(*) as total_documentos,
+        COALESCE(SUM(d.tamanho_arquivo), 0) as tamanho_total_bytes,
+        COUNT(DISTINCT d.tipo_arquivo) as tipos_arquivo_diferentes
+      FROM documento d
+      WHERE d.projeto_id = $1
+    ),
+    recent_documents AS (
+      -- Documentos recentes
+      SELECT 
+        d.documento_id,
+        d.nome_arquivo,
+        d.tipo_arquivo,
+        d.tamanho_arquivo,
+        d.criado_em
+      FROM documento d
+      WHERE d.projeto_id = $1
+      ORDER BY d.criado_em DESC
+      LIMIT 5
+    ),
+    sprints_summary AS (
+      -- Sprints do projeto
+      SELECT 
+        COUNT(*) as total_sprints,
+        COALESCE(SUM(s.story_points), 0) as total_story_points_sprints,
+        AVG(s.dias_sprint) as media_dias_sprint,
+        MIN(s.data_inicio) as primeira_sprint,
+        MAX(s.data_fim) as ultima_sprint
+      FROM sprint s
+      WHERE s.projeto_id = $1
+    ),
+    current_sprint_tasks AS (
+      -- Tarefas da sprint atual
+      SELECT 
+        COUNT(*) as tarefas_sprint_atual,
+        COALESCE(SUM(t.story_points), 0) as story_points_sprint_atual,
+        COUNT(CASE WHEN t.status = 'Concluída' THEN 1 END) as tarefas_concluidas_sprint_atual
+      FROM tarefa t
+      INNER JOIN projeto p ON t.projeto_id = p.projeto_id
+      WHERE t.projeto_id = $1 AND t.sprint_id = p.sprint_selecionada_id
+    ),
+    messages_summary AS (
+      -- Mensagens do projeto
+      SELECT 
+        COUNT(*) as total_mensagens,
+        COUNT(DISTINCT m.usuario_id) as usuarios_ativos_chat,
+        MIN(m.criado_em) as primeira_mensagem,
+        MAX(m.criado_em) as ultima_mensagem
+      FROM mensagem m
+      WHERE m.projeto_id = $1
+    ),
+    task_history_summary AS (
+      -- Histórico de alterações de tarefas
+      SELECT 
+        COUNT(*) as total_alteracoes_tarefas,
+        COUNT(DISTINCT ht.tarefa_id) as tarefas_com_historico,
+        COUNT(DISTINCT ht.usuario_id) as usuarios_alteracoes
+      FROM historico_tarefa ht
+      INNER JOIN tarefa t ON ht.tarefa_id = t.tarefa_id
+      WHERE t.projeto_id = $1
+    ),
+    requirement_history_summary AS (
+      -- Histórico de alterações de requisitos
+      SELECT 
+        COUNT(*) as total_alteracoes_requisitos,
+        COUNT(DISTINCT hr.requisito_id) as requisitos_com_historico
+      FROM historico_requisito hr
+      INNER JOIN requisito r ON hr.requisito_id = r.requisito_id
+      WHERE r.projeto_id = $1
+    )
+
+    SELECT 
+      -- Dados do projeto
+      (SELECT row_to_json(pd) FROM project_data pd) as projeto,
+      
+      -- Equipe
+      (SELECT json_agg(row_to_json(tm)) FROM team_members tm) as equipe,
+      
+      -- Resumos gerais
+      (SELECT row_to_json(ts) FROM tasks_summary ts) as resumo_tarefas,
+      (SELECT row_to_json(rs) FROM requirements_summary rs) as resumo_requisitos,
+      (SELECT row_to_json(cs) FROM commits_summary cs) as resumo_commits,
+      (SELECT row_to_json(ds) FROM documents_summary ds) as resumo_documentos,
+      (SELECT row_to_json(ss) FROM sprints_summary ss) as resumo_sprints,
+      (SELECT row_to_json(cst) FROM current_sprint_tasks cst) as sprint_atual,
+      (SELECT row_to_json(ms) FROM messages_summary ms) as resumo_mensagens,
+      (SELECT row_to_json(ths) FROM task_history_summary ths) as historico_tarefas,
+      (SELECT row_to_json(rhs) FROM requirement_history_summary rhs) as historico_requisitos,
+      
+      -- Dados detalhados
+      (SELECT json_agg(row_to_json(tbp)) FROM tasks_by_priority tbp) as tarefas_por_prioridade,
+      (SELECT json_agg(row_to_json(tbs)) FROM tasks_by_status tbs) as tarefas_por_status,
+      (SELECT json_agg(row_to_json(rc)) FROM recent_commits rc) as commits_recentes,
+      (SELECT json_agg(row_to_json(rd)) FROM recent_documents rd) as documentos_recentes
+  `;
+
+  try {
+    const result = await pool.query(query, [projectId]);
+
+    if (result.rows.length === 0) {
+      throw new Error("Projeto não encontrado");
+    }
+
+    return result.rows[0];
+  } catch (error) {
+    console.error("Erro ao gerar relatório do projeto:", error);
+    throw error;
+  }
+}
+
+async function getProjectMetrics(projectId) {
+  const query = `
+    WITH completed_sprints AS (
+      -- Sprints concluídas com dados de velocidade
+      SELECT 
+        s.sprint_id,
+        s.nome,
+        s.story_points as story_points_planejados,
+        COALESCE(SUM(t.story_points), 0) as story_points_concluidos,
+        s.data_inicio,
+        s.data_fim
+      FROM sprint s
+      LEFT JOIN tarefa t ON s.sprint_id = t.sprint_id AND t.status = 'Concluída'
+      WHERE s.projeto_id = $1 AND s.data_fim < NOW()
+      GROUP BY s.sprint_id, s.nome, s.story_points, s.data_inicio, s.data_fim
+    ),
+    weekly_throughput AS (
+      -- Throughput semanal (tarefas concluídas por semana)
+      SELECT 
+        DATE_TRUNC('week', data_fim_real) as semana,
+        COUNT(*) as tarefas_concluidas,
+        COALESCE(SUM(story_points), 0) as story_points_concluidos
+      FROM tarefa 
+      WHERE projeto_id = $1 
+        AND status = 'Concluída' 
+        AND data_fim_real IS NOT NULL
+      GROUP BY DATE_TRUNC('week', data_fim_real)
+      ORDER BY semana DESC
+      LIMIT 8
+    ),
+    lead_time_metrics AS (
+      -- Métricas de lead time e cycle time
+      SELECT 
+        AVG(EXTRACT(EPOCH FROM (data_fim_real - data_criacao))/86400) as lead_time_medio_dias,
+        AVG(cycle_time_dias) as cycle_time_medio_dias,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (data_fim_real - data_criacao))/86400) as lead_time_mediano_dias,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cycle_time_dias) as cycle_time_mediano_dias,
+        COUNT(*) as total_tarefas_medidas
+      FROM tarefa 
+      WHERE projeto_id = $1 
+        AND status = 'Concluída' 
+        AND data_fim_real IS NOT NULL
+        AND data_criacao IS NOT NULL
+    ),
+    team_velocity AS (
+      -- Velocidade da equipe
+      SELECT 
+        COALESCE(AVG(story_points_concluidos), 0) as velocidade_media,
+        COALESCE(MIN(story_points_concluidos), 0) as velocidade_minima,
+        COALESCE(MAX(story_points_concluidos), 0) as velocidade_maxima,
+        COUNT(*) as sprints_analisadas
+      FROM completed_sprints
+    ),
+    completion_rates AS (
+      -- Taxas de conclusão
+      SELECT 
+        -- Taxa de conclusão de tarefas
+        (SELECT 
+          CASE 
+            WHEN COUNT(*) = 0 THEN 0
+            ELSE (COUNT(*) FILTER (WHERE status = 'Concluída'))::numeric / COUNT(*)
+          END
+         FROM tarefa WHERE projeto_id = $1) as taxa_conclusao_tarefas,
+        
+        -- Taxa de conclusão de requisitos
+        (SELECT 
+          CASE 
+            WHEN COUNT(*) = 0 THEN 0
+            ELSE (COUNT(*) FILTER (WHERE status = 'Concluído'))::numeric / COUNT(*)
+          END
+         FROM requisito WHERE projeto_id = $1) as taxa_conclusao_requisitos,
+         
+        -- Taxa de entrega no prazo
+        (SELECT 
+          CASE 
+            WHEN COUNT(*) = 0 THEN 0
+            ELSE (COUNT(*) FILTER (WHERE data_entrega >= data_fim_real))::numeric / COUNT(*)
+          END
+         FROM tarefa
+         WHERE projeto_id = $1 
+           AND status = 'Concluída' 
+           AND data_entrega IS NOT NULL 
+           AND data_fim_real IS NOT NULL) as tarefas_entregues_no_prazo
+    ),
+    quality_metrics AS (
+      -- Métricas de qualidade
+      SELECT 
+        -- Reabertura de tarefas (baseado no histórico)
+        (SELECT COUNT(DISTINCT ht.tarefa_id) 
+         FROM historico_tarefa ht
+         INNER JOIN tarefa t ON ht.tarefa_id = t.tarefa_id
+         WHERE t.projeto_id = $1 
+           AND ht.campo_alterado = 'status' 
+           AND ht.valor_anterior = 'Concluída'
+           AND ht.valor_novo != 'Concluída') as tarefas_reabertas,
+           
+        -- Commits por tarefa
+        (SELECT 
+          CASE 
+            WHEN COUNT(DISTINCT t.tarefa_id) = 0 THEN 0
+            ELSE COUNT(*)::numeric / COUNT(DISTINCT t.tarefa_id)
+          END
+         FROM commit c
+         INNER JOIN tarefa t ON c.projeto_id = t.projeto_id
+         WHERE t.projeto_id = $1) as commits_por_tarefa
+    ),
+    workload_distribution AS (
+      -- Distribuição de carga de trabalho
+      SELECT 
+        COUNT(DISTINCT responsavel_id) as membros_com_tarefas,
+        (SELECT COUNT(*) FROM usuario_equipe ue 
+         INNER JOIN projeto_equipe pe ON ue.equipe_id = pe.equipe_id 
+         WHERE pe.projeto_id = $1) as total_membros_equipe,
+        AVG(tarefas_por_membro) as media_tarefas_por_membro,
+        MAX(tarefas_por_membro) as max_tarefas_por_membro
+      FROM (
+        SELECT responsavel_id, COUNT(*) as tarefas_por_membro
+        FROM tarefa
+        WHERE projeto_id = $1 AND responsavel_id IS NOT NULL
+        GROUP BY responsavel_id
+      ) subquery
+    )
+
+    SELECT 
+      -- Velocidade e Produtividade
+      (SELECT row_to_json(tv) FROM team_velocity tv) as velocidade,
+      
+      -- Tempos
+      (SELECT row_to_json(ltm) FROM lead_time_metrics ltm) as tempos_entrega,
+      
+      -- Taxas de Conclusão
+      (SELECT row_to_json(cr) FROM completion_rates cr) as taxas_conclusao,
+      
+      -- Métricas de Qualidade
+      (SELECT row_to_json(qm) FROM quality_metrics qm) as qualidade,
+      
+      -- Distribuição de Trabalho
+      (SELECT row_to_json(wd) FROM workload_distribution wd) as distribuicao_trabalho,
+      
+      -- Dados Detalhados
+      (SELECT json_agg(row_to_json(cs)) FROM completed_sprints cs) as sprints_concluidas,
+      (SELECT json_agg(row_to_json(wt)) FROM weekly_throughput wt) as throughput_semanal
+  `;
+
+  try {
+    const result = await pool.query(query, [projectId]);
+
+    if (result.rows.length === 0) {
+      throw new Error("Projeto não encontrado para métricas");
+    }
+
+    return result.rows[0];
+  } catch (error) {
+    console.error("Erro ao obter métricas do projeto:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   getAllProjects,
   getProjectsById,
@@ -339,4 +707,6 @@ module.exports = {
   fetchProjectUsers,
   getCommitsByRepo,
   getProjectCycleTime,
+  getProjectReport,
+  getProjectMetrics,
 };
