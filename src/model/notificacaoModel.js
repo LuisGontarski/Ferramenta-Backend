@@ -23,9 +23,6 @@ async function buscarNotificacoesUsuario(usuario_id, limit = 20, offset = 0) {
   `;
 
   try {
-    console.log("🔍 Model - Buscando notificações para:", usuario_id);
-    console.log("🔍 Model - Limit:", limit, "Offset:", offset);
-
     const result = await pool.query(query, [usuario_id, limit, offset]);
 
     console.log(

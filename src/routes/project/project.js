@@ -129,8 +129,6 @@ router.get("/projects/:projeto_id/sprint-selecionada", async (req, res) => {
   const { projeto_id } = req.params;
 
   try {
-    console.log("🔍 Buscando sprint selecionada para projeto:", projeto_id);
-
     const query = `
       SELECT sprint_selecionada_id 
       FROM projeto 
@@ -147,8 +145,6 @@ router.get("/projects/:projeto_id/sprint-selecionada", async (req, res) => {
     }
 
     const sprintSelecionadaId = result.rows[0].sprint_selecionada_id;
-
-    console.log("✅ Sprint selecionada encontrada:", sprintSelecionadaId);
 
     res.status(200).json({
       success: true,

@@ -34,10 +34,6 @@ async function criarRequisito({
 
 // Listar requisitos por projeto
 async function listarRequisitosPorProjeto(projeto_id) {
-  console.log(
-    `✅ listarRequisitosPorProjeto CHAMADA com projeto_id: ${projeto_id}`
-  );
-
   const query = `
     SELECT *
     FROM public.requisito
@@ -45,8 +41,6 @@ async function listarRequisitosPorProjeto(projeto_id) {
       AND status = 'Em análise'
     ORDER BY criado_em ASC;
   `;
-
-  console.log(`✅ Query executada: ${query.replace(/\s+/g, " ")}`);
 
   try {
     const result = await pool.query(query, [projeto_id]);
@@ -133,27 +127,20 @@ async function atualizarStatusRequisito(
 ) {
   const client = await pool.connect();
 
-  console.log("🔧 DEBUG: Iniciando atualizarStatusRequisito");
-
   try {
     await client.query("BEGIN");
-    console.log("🔧 DEBUG: Transaction iniciada");
 
     // 1. Buscar status atual
     const statusAtualQuery = `
       SELECT status FROM requisito WHERE requisito_id = $1
     `;
-    console.log("🔧 DEBUG: Buscando status atual...");
     const statusResult = await client.query(statusAtualQuery, [requisito_id]);
 
     if (statusResult.rows.length === 0) {
-      console.log("❌ DEBUG: Requisito não encontrado");
       throw new Error("Requisito não encontrado");
     }
 
     const status_anterior = statusResult.rows[0].status;
-    console.log("🔧 DEBUG: Status anterior:", status_anterior);
-    console.log("🔧 DEBUG: Status novo:", novoStatus);
 
     // 2. Atualizar status do requisito
     const updateQuery = `
@@ -163,15 +150,12 @@ async function atualizarStatusRequisito(
       WHERE requisito_id = $2
       RETURNING *;
     `;
-    console.log("🔧 DEBUG: Atualizando requisito...");
     const updateResult = await client.query(updateQuery, [
       novoStatus,
       requisito_id,
     ]);
-    console.log("✅ DEBUG: Requisito atualizado");
 
     // 3. ✅✅✅ SEMPRE registrar no histórico (mesmo se status for igual)
-    console.log("🔧 DEBUG: Registrando histórico...");
     const observacao = `Status alterado via atualização de tarefa - Fase: ${novoStatus}`;
     await registrarHistoricoRequisito(
       requisito_id,
@@ -180,10 +164,8 @@ async function atualizarStatusRequisito(
       usuario_id,
       observacao
     );
-    console.log("✅ DEBUG: Histórico registrado");
 
     await client.query("COMMIT");
-    console.log("✅ DEBUG: Transaction commitada");
     return updateResult.rows[0];
   } catch (error) {
     await client.query("ROLLBACK");
@@ -196,10 +178,6 @@ async function atualizarStatusRequisito(
 
 // No seu arquivo de models
 async function listarRequisitosPorProjeto2(projeto_id) {
-  console.log(
-    "🎯 listarRequisitosPorProjeto2 EXECUTADA - FILTRANDO 'Em análise'"
-  );
-
   const query = `
     SELECT 
       requisito_id,
@@ -217,17 +195,9 @@ async function listarRequisitosPorProjeto2(projeto_id) {
   `;
 
   try {
-    console.log("🎯 Query que será executada:", query.replace(/\s+/g, " "));
-    console.log("🎯 Parâmetro projeto_id:", projeto_id);
-
     const result = await pool.query(query, [projeto_id]);
 
-    console.log(
-      `🎯 RESULTADO: ${result.rows.length} requisitos encontrados com status "Em análise"`
-    );
-
     if (result.rows.length > 0) {
-      console.log("🎯 Detalhes dos requisitos:");
       result.rows.forEach((req, index) => {
         console.log(
           `  ${index + 1}. ID: ${req.requisito_id}, Status: "${
@@ -236,7 +206,6 @@ async function listarRequisitosPorProjeto2(projeto_id) {
         );
       });
     } else {
-      console.log("🎯 NENHUM requisito com status 'Em análise' encontrado");
     }
 
     return result.rows;
@@ -253,15 +222,6 @@ async function registrarHistoricoRequisito(
   usuario_id = null,
   observacao = null
 ) {
-  console.log("🔧 DEBUG: registrarHistoricoRequisito chamado");
-  console.log("🔧 DEBUG: Parâmetros:", {
-    requisito_id,
-    status_anterior,
-    status_novo,
-    usuario_id,
-    observacao,
-  });
-
   const query = `
     INSERT INTO historico_requisito 
     (requisito_id, status_anterior, status_novo, usuario_id, observacao)
@@ -270,7 +230,6 @@ async function registrarHistoricoRequisito(
   `;
 
   try {
-    console.log("🔧 DEBUG: Executando INSERT no histórico...");
     const result = await pool.query(query, [
       requisito_id,
       status_anterior,
@@ -279,10 +238,6 @@ async function registrarHistoricoRequisito(
       observacao,
     ]);
 
-    console.log(
-      "✅ DEBUG: Histórico inserido com sucesso! ID:",
-      result.rows[0].historico_id
-    );
     return result.rows[0];
   } catch (error) {
     console.error("❌ DEBUG: Erro ao inserir histórico:", error);

@@ -280,8 +280,6 @@ exports.listCommitsByTarefa = async (req, res) => {
     // Buscar últimos 30 commits do GitHub
     const commits = await getCommitsByRepo(github_repo);
 
-    console.log(commits);
-
     res.json(commits);
   } catch (error) {
     console.error("Erro ao listar commits:", error);

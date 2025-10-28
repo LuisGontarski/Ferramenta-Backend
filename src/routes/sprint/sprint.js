@@ -30,7 +30,6 @@ router.get('/sprint/:id/burndown', async (req, res) => {
         if (diasSprint <= 0 && dataInicioSprint && dataFimSprint && dataInicioSprint <= dataFimSprint) {
            const diffTime = Math.abs(dataFimSprint.getTime() - dataInicioSprint.getTime());
            diasSprint = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-           console.log(`Dias da sprint calculados pelas datas: ${diasSprint}`);
         } else if (diasSprint <= 0) {
             console.warn(`Sprint ${sprintId} não tem dias_sprint definidos nem datas válidas para cálculo.`);
             diasSprint = 1;
@@ -59,7 +58,6 @@ router.get('/sprint/:id/burndown', async (req, res) => {
             acc[diaFormatado] = parseInt(row.concluidos_no_dia, 10);
             return acc;
         }, {});
-        console.log("Tarefas concluídas por dia:", tarefasConcluidasPorDia);
 
         // --- INÍCIO DA LÓGICA CORRIGIDA ---
         const pontosConcluidosAcumuladosPorDia = {};
@@ -71,7 +69,6 @@ router.get('/sprint/:id/burndown', async (req, res) => {
             acumulado += tarefasConcluidasPorDia[dia];
             pontosConcluidosAcumuladosPorDia[dia] = acumulado;
         });
-        console.log("Pontos concluídos acumulados por dia:", pontosConcluidosAcumuladosPorDia);
 
         const burndownData = [];
         let ultimoValorAcumuladoConhecido = 0; // Guarda o último valor acumulado visto

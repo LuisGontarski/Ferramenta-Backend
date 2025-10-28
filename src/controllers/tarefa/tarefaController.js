@@ -118,10 +118,6 @@ exports.createTarefa = async (req, res) => {
               "Nova Tarefa Atribuída",
               `Você foi atribuído à tarefa "${titulo}" no projeto "${nomeProjeto}" por ${nomeCriador}.`,
             ]);
-
-            console.log(
-              `✅ Notificação registrada no banco para usuário: ${responsavel_id}`
-            );
           } catch (notificacaoError) {
             console.error(
               "❌ Erro ao registrar notificação (ignorado):",
@@ -131,11 +127,7 @@ exports.createTarefa = async (req, res) => {
 
           // ✅ 4. Enviar email (código original mantido)
           sendEmail(responsavel.email, subject, text)
-            .then(() =>
-              console.log(
-                `E-mail de notificação enviado para ${responsavel.email}`
-              )
-            )
+            .then(() => console.log(`E-mail enviado para ${responsavel.email}`))
             .catch((emailError) =>
               console.error(
                 `Falha ao enviar e-mail para ${responsavel.email}:`,
@@ -342,9 +334,6 @@ exports.updatePatchTarefa = async (req, res) => {
             `Atenciosamente,\nEquipe da Plataforma`;
 
           await sendEmail(donoDoProjeto.email, subject, text);
-          console.log(
-            `E-mail de conclusão de tarefa enviado para ${donoDoProjeto.email}`
-          );
         } catch (emailError) {
           console.error(`Falha ao enviar e-mail de conclusão:`, emailError);
         }
@@ -491,9 +480,6 @@ exports.getInformacoesTarefa = async (req, res) => {
 exports.getHistoricoTarefasPorProjeto = async (req, res) => {
   const { projeto_id } = req.params;
 
-  console.log("🔧 DEBUG: getHistoricoTarefasPorProjeto chamado");
-  console.log("🔧 DEBUG: projeto_id:", projeto_id);
-
   if (!projeto_id) {
     return res.status(400).json({ message: "projeto_id é obrigatório." });
   }
@@ -524,9 +510,6 @@ exports.getHistoricoTarefasPorProjeto = async (req, res) => {
 
 exports.getTarefasByProjeto = async (req, res) => {
   const { projeto_id } = req.params;
-
-  console.log("🔧 DEBUG: getTarefasByProjeto chamado");
-  console.log("🔧 DEBUG: projeto_id:", projeto_id);
 
   if (!projeto_id) {
     return res.status(400).json({
@@ -560,9 +543,6 @@ exports.getTarefasByProjeto = async (req, res) => {
 // No controller (tarefaController.js)
 exports.getHistoricoTarefaPorId = async (req, res) => {
   const { tarefa_id } = req.params;
-
-  console.log("🔧 DEBUG: getHistoricoTarefaPorId chamado");
-  console.log("🔧 DEBUG: tarefa_id:", tarefa_id);
 
   if (!tarefa_id) {
     return res.status(400).json({ message: "tarefa_id é obrigatório." });

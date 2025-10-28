@@ -309,8 +309,6 @@ async function registrarHistoricoTarefa(
   `;
 
   try {
-    console.log(`🔧 Tentando registrar histórico para tarefa: ${tarefa_id}`);
-
     const result = await pool.query(query, [
       tarefa_id,
       tipo_alteracao,
@@ -321,9 +319,6 @@ async function registrarHistoricoTarefa(
       observacao,
     ]);
 
-    console.log(
-      `✅ Histórico registrado com SUCESSO para tarefa: ${tarefa_id}`
-    );
     return result.rows[0];
   } catch (error) {
     // ✅ IMPORTANTE: Só loga o erro, NÃO joga para não quebrar o fluxo principal
@@ -364,9 +359,6 @@ async function getHistoricoTarefasPorProjeto(projeto_id) {
 
   try {
     const result = await pool.query(query, [projeto_id]);
-    console.log(
-      `📊 ${result.rows.length} históricos encontrados para projeto ${projeto_id}`
-    );
     return result.rows;
   } catch (error) {
     console.error("Erro ao buscar histórico de tarefas por projeto:", error);
@@ -408,9 +400,7 @@ async function getTarefasByProjeto(projeto_id) {
 
   try {
     const result = await pool.query(query, [projeto_id]);
-    console.log(
-      `📊 ${result.rows.length} tarefas encontradas para projeto ${projeto_id}`
-    );
+
     return result.rows;
   } catch (error) {
     console.error("Erro ao buscar tarefas por projeto:", error);
@@ -447,9 +437,6 @@ async function getHistoricoTarefaPorId(tarefa_id) {
 
   try {
     const result = await pool.query(query, [tarefa_id]);
-    console.log(
-      `📊 ${result.rows.length} históricos encontrados para tarefa ${tarefa_id}`
-    );
     return result.rows;
   } catch (error) {
     console.error("Erro ao buscar histórico da tarefa por ID:", error);

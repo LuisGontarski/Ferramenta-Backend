@@ -12,7 +12,6 @@ exports.contarNaoLidas = async (req, res) => {
       });
     }
 
-    console.log("🔍 Buscando notificações para usuário:", usuario_id);
 
     const totalNaoLidas = await notificationModel.contarNotificacoesNaoLidas(
       usuario_id
@@ -38,9 +37,6 @@ exports.getNotificacoes = async (req, res) => {
   try {
     const { usuario_id, page = 0, limit = 20 } = req.query;
 
-    console.log("🔍 Backend - Buscando notificações para:", usuario_id);
-    console.log("🔍 Backend - Page:", page, "Limit:", limit);
-
     if (!usuario_id) {
       return res.status(400).json({
         success: false,
@@ -59,10 +55,6 @@ exports.getNotificacoes = async (req, res) => {
     const totalNaoLidas = await notificationModel.contarNotificacoesNaoLidas(
       usuario_id
     );
-
-    console.log("📊 Backend - Notificações encontradas:", notificacoes.length);
-    console.log("📊 Backend - Total não lidas:", totalNaoLidas);
-    console.log("📊 Backend - Notificações:", notificacoes);
 
     res.json({
       success: true,
