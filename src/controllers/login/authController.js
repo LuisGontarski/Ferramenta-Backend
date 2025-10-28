@@ -210,12 +210,18 @@ exports.postCreateUser = async (req, res) => {
       return res.status(409).json({ message: "Email já cadastrado." });
     }
 
+    // ✅ NOVO: busca username se o token vier do GitHub
+    let githubUsername = null;
+    if (userDTO.github_token) {
+      githubUsername = await getGithubUsernameFromToken(userDTO.github_token);
+    }
+
     const newUser = await createUser({
       nome: userDTO.nome_usuario,
       email: userDTO.email,
       senha: userDTO.senha,
       cargo: userDTO.cargo,
-      github: userDTO.github,
+      github: githubUsername, 
       foto_perfil: userDTO.foto_perfil,
       github_token: userDTO.github_token,
     });
@@ -224,6 +230,7 @@ exports.postCreateUser = async (req, res) => {
       message: "Usuário registrado com sucesso!",
       usuario_id: newUser.usuario_id,
       github_token: newUser.github_token,
+      github: githubUsername,
     });
   } catch (error) {
     console.error("Erro ao registrar usuário:", error);
