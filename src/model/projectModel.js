@@ -714,7 +714,6 @@ async function getProjectMetrics(projectId) {
           throughput_semanal: []
        };
     }
-    console.log(`Métricas calculadas para o projeto ${projectId}:`, result.rows[0]); // Log para depuração
     return result.rows[0];
   } catch (error) {
     console.error("Erro ao obter métricas do projeto:", error);
