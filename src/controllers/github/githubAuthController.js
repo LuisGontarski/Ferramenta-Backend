@@ -3,14 +3,16 @@ const axios = require("axios");
 exports.githubCallback = async (req, res) => {
   const { code, error } = req.query;
 
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+
   if (error) {
     console.error("Erro do GitHub:", error);
-    return res.redirect("http://localhost:5173/github-error-integration"); // sem token = erro
+    return res.redirect(`${frontendUrl}/github-error-integration`); // sem token = erro
   }
 
   if (!code) {
     console.error("Código de autorização não encontrado");
-    return res.redirect("http://localhost:5173/github-error-integration"); // sem token = erro
+    return res.redirect(`${frontendUrl}/github-error-integration`); // sem token = erro
   }
 
   try {
@@ -28,22 +30,24 @@ exports.githubCallback = async (req, res) => {
 
     if (!accessToken) {
       console.error("Não foi possível obter o token");
-      return res.redirect("http://localhost:5173/github-error-integration"); // erro
+      return res.redirect(`${frontendUrl}/github-error-integration`); // erro
     }
 
     console.log("Token obtido:", accessToken);
     return res.redirect(
-      `http://localhost:5173/github-success-integration?github_token=${accessToken}`
+      `${frontendUrl}/github-success-integration?github_token=${accessToken}`
     );
   } catch (err) {
     console.error("Erro ao trocar code por token:", err.message);
-    return res.redirect("http://localhost:5173/github-error-integration"); // erro
+    return res.redirect(`${frontendUrl}/github-error-integration`); // erro
   }
 };
 
 exports.githubLogin = (_req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri = "http://localhost:3000/api/auth/github/callback";
+
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:3000";
+  const redirectUri = `${backendUrl}/api/auth/github/callback`;
 
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
     redirectUri
