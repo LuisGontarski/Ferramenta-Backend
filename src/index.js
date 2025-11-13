@@ -14,10 +14,10 @@ const commitRoutes = require("./routes/commit/commit");
 const relatorioRoutes = require("./routes/relatorio/relatorio");
 const chatRoutes = require("./routes/chat/chat");
 const sprintRoutes = require("./routes/sprint/sprint");
-const documentoRoutes = require("./routes/documento/documento");
+const documentoRoutes = require("./routes/documento/documento"); 
 const requisitoRoutes = require("./routes/requisito/requisito");
 const notificacaoRoutes = require("./routes/notificacao/notificacao");
-const path = require("path");
+const path = require('path');
 
 // Model do chat
 const chatModel = require("./model/chatModel");
@@ -26,30 +26,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
-app.use(cors({
-  origin: function (origin, callback) {
-    if (process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
-    
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'http://localhost:5173', 
-      'https://ferramenta-frontend-3mnv.vercel.app'
-    ];
-    
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 // Torna a pasta 'uploads' acessível publicamente para que os arquivos possam ser baixados
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Rotas
 app.use("/api", authRoutes);
@@ -65,47 +46,20 @@ app.use("/api", documentoRoutes);
 app.use("/api", requisitoRoutes);
 app.use("/api", notificacaoRoutes);
 
+
 // Criação do servidor HTTP para usar com Socket.io
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: function (origin, callback) {
-      // Permitir todas as origens em desenvolvimento
-      if (process.env.NODE_ENV !== 'production') {
-        return callback(null, true);
-      }
-      
-      // Em produção, permitir apenas o frontend específico
-      const allowedOrigins = [
-        process.env.FRONTEND_URL,
-        'http://localhost:5173',
-        'https://ferramenta-frontend-3mnv.vercel.app'
-      ];
-      
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ["GET", "POST"],
-    credentials: true
-  },
-  transports: ['websocket', 'polling']
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 // ----------------------
 // Socket.io Chat
 // ----------------------
 io.on("connection", (socket) => {
-  console.log("Usuário conectado via Socket.io:", socket.id);
 
   // Entrar na sala do projeto e enviar histórico
   socket.on("joinProject", async (projeto_id) => {
     if (!projeto_id) return;
-
     socket.join(projeto_id);
-    console.log(`Usuário ${socket.id} entrou na sala: ${projeto_id}`);
 
     try {
       const mensagens = await chatModel.getMensagens(projeto_id);
@@ -120,10 +74,7 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async (data) => {
     try {
       const { usuario_id, projeto_id, texto, usuario_nome } = data;
-      if (!usuario_id || !projeto_id || !texto) {
-        console.log("Dados incompletos:", data);
-        return;
-      }
+      if (!usuario_id || !projeto_id || !texto) return;
 
       // Salvar mensagem no banco
       const mensagemSalva = await chatModel.enviarMensagem({
@@ -139,22 +90,12 @@ io.on("connection", (socket) => {
         texto,
         data_envio: mensagemSalva.criado_em,
       });
-
-      console.log("Mensagem enviada para sala:", projeto_id);
     } catch (err) {
       console.error("Erro ao enviar mensagem via socket:", err);
       socket.emit("error", { message: "Erro ao enviar mensagem" });
     }
   });
 
-  // Log para debug
-  socket.on("disconnect", (reason) => {
-    console.log("Usuário desconectado:", socket.id, "Razão:", reason);
-  });
-
-  socket.on("error", (error) => {
-    console.error("Erro no socket:", error);
-  });
 });
 
 // Inicia o servidor
