@@ -14,10 +14,10 @@ const commitRoutes = require("./routes/commit/commit");
 const relatorioRoutes = require("./routes/relatorio/relatorio");
 const chatRoutes = require("./routes/chat/chat");
 const sprintRoutes = require("./routes/sprint/sprint");
-const documentoRoutes = require("./routes/documento/documento"); 
+const documentoRoutes = require("./routes/documento/documento");
 const requisitoRoutes = require("./routes/requisito/requisito");
 const notificacaoRoutes = require("./routes/notificacao/notificacao");
-const path = require('path');
+const path = require("path");
 
 // Model do chat
 const chatModel = require("./model/chatModel");
@@ -30,7 +30,7 @@ app.use(cors());
 app.use(express.json());
 
 // Torna a pasta 'uploads' acessível publicamente para que os arquivos possam ser baixados
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 // Rotas
 app.use("/api", authRoutes);
@@ -46,20 +46,29 @@ app.use("/api", documentoRoutes);
 app.use("/api", requisitoRoutes);
 app.use("/api", notificacaoRoutes);
 
-
 // Criação do servidor HTTP para usar com Socket.io
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"], // Adiciona transportes explícitos
+});
 
 // ----------------------
 // Socket.io Chat
 // ----------------------
 io.on("connection", (socket) => {
+  console.log("Usuário conectado via Socket.io:", socket.id);
 
   // Entrar na sala do projeto e enviar histórico
   socket.on("joinProject", async (projeto_id) => {
     if (!projeto_id) return;
+
     socket.join(projeto_id);
+    console.log(`Usuário ${socket.id} entrou na sala: ${projeto_id}`);
 
     try {
       const mensagens = await chatModel.getMensagens(projeto_id);
@@ -74,7 +83,10 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async (data) => {
     try {
       const { usuario_id, projeto_id, texto, usuario_nome } = data;
-      if (!usuario_id || !projeto_id || !texto) return;
+      if (!usuario_id || !projeto_id || !texto) {
+        console.log("Dados incompletos:", data);
+        return;
+      }
 
       // Salvar mensagem no banco
       const mensagemSalva = await chatModel.enviarMensagem({
@@ -90,12 +102,22 @@ io.on("connection", (socket) => {
         texto,
         data_envio: mensagemSalva.criado_em,
       });
+
+      console.log("Mensagem enviada para sala:", projeto_id);
     } catch (err) {
       console.error("Erro ao enviar mensagem via socket:", err);
       socket.emit("error", { message: "Erro ao enviar mensagem" });
     }
   });
 
+  // Log para debug
+  socket.on("disconnect", (reason) => {
+    console.log("Usuário desconectado:", socket.id, "Razão:", reason);
+  });
+
+  socket.on("error", (error) => {
+    console.error("Erro no socket:", error);
+  });
 });
 
 // Inicia o servidor

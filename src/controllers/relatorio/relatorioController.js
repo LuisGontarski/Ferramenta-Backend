@@ -335,29 +335,29 @@ exports.obterDadosRelatorioProjeto = async (req, res) => {
   }
 };
 
-exports.gerarPDFFromData = async (req, res) => {
-  const reportData = req.body;
+// exports.gerarPDFFromData = async (req, res) => {
+//   const reportData = req.body;
 
-  if (!reportData || !reportData.projeto) {
-    return res
-      .status(400)
-      .json({ error: "Dados do relatório são obrigatórios" });
-  }
+//   if (!reportData || !reportData.projeto) {
+//     return res
+//       .status(400)
+//       .json({ error: "Dados do relatório são obrigatórios" });
+//   }
 
-  try {
-    const pdf = await generatePDFFromData(reportData);
+//   try {
+//     const pdf = await generatePDFFromData(reportData);
 
-    res.contentType("application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="relatorio-${reportData.projeto.nome}.pdf"`
-    );
-    res.send(pdf);
-  } catch (err) {
-    console.error("Erro ao gerar PDF:", err);
-    res.status(500).json({ error: `Erro ao gerar PDF: ${err.message || err}` });
-  }
-};
+//     res.contentType("application/pdf");
+//     res.setHeader(
+//       "Content-Disposition",
+//       `attachment; filename="relatorio-${reportData.projeto.nome}.pdf"`
+//     );
+//     res.send(pdf);
+//   } catch (err) {
+//     console.error("Erro ao gerar PDF:", err);
+//     res.status(500).json({ error: `Erro ao gerar PDF: ${err.message || err}` });
+//   }
+// };
 
 // Função reutilizável para gerar PDF
 exports.gerarPDFFromData = async (req, res) => {
